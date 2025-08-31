@@ -8,6 +8,7 @@ import (
 	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	"github.com/sshfz/consumer-service-substrate/internal/consumers"
 	"github.com/sshfz/consumer-service-substrate/internal/helpers"
+	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 	"github.com/streadway/amqp"
 )
 
@@ -144,7 +145,7 @@ func handleSpinConsumer(body []byte) error {
 	}
 	if !response.Is_valid_prompt {
 		///call webhook in api-server for failed attempt
-		err := helpers.PrecheckAction("failed", response.Reason)
+		err := webhooks.PrecheckAction("failed", response.Reason)
 		if err != nil {
 			log.Println("api-service webhook failed")
 			return err
@@ -155,7 +156,7 @@ func handleSpinConsumer(body []byte) error {
 	///calling webhook for successful precheck -----
 	log.Println("Anthropic Precheck passed, proceeding for code generation...")
 
-	err = helpers.PrecheckAction("finished", response.Response)
+	err = webhooks.PrecheckAction("finished", response.Response)
 	if err != nil {
 		log.Println("api-service webhook failed")
 		return err

@@ -130,7 +130,6 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			baseApiUrl := fmt.Sprintf("http://localhost:%d", backendPort)
 			apis["userPrompt"] = spinRequest.Prompt
 			apis["baseApiUrl"] = baseApiUrl
-			apis["appPort"] = appPort
 			jsonBytes, err := json.Marshal(apis)
 			if err != nil {
 				log.Println("error parsing backend struct")

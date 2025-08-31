@@ -10,6 +10,7 @@ import (
 	"github.com/sshfz/consumer-service-substrate/internal/helpers"
 	"github.com/sshfz/consumer-service-substrate/internal/producers"
 	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 )
 
 func SpinRequestConsumer(spinRequest SpinRequest) error {
@@ -105,7 +106,7 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 	sendPorts := map[string]interface{}{
 		"appPort": appPort,
 	}
-	err = helpers.CodeGenerationAction("finished", sendPorts)
+	err = webhooks.CodeGenerationAction("finished", sendPorts)
 	if err != nil {
 		log.Println("Error calling code generation webhook")
 		return err
