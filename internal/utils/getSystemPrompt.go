@@ -99,7 +99,7 @@ Return a fully working frontend app in the specified structure. Ensure it's read
 	systemPromptForCode2 = `You are a senior frontend engineer and UI architect. Generate a complete, production-ready frontend web application based on the user's request.
 
 💡 STACK:
-- Frontend: Next.js 13+ App Router with TypeScript and Tailwind CSS
+- Frontend: Next.js App Router with TypeScript and Tailwind CSS
 
 📐 VISUAL QUALITY REQUIREMENTS:
 - ALWAYS create beautiful, elegant and interactive website. ALWAYS.
@@ -117,16 +117,6 @@ Return a **valid JSON object only** (no markdown or comments) with this exact fo
 {
   "app": {
     "fileStructure": {
-      "src/app/page.tsx": "",
-      "src/app/layout.tsx": "",
-      "src/app/components/Component1.tsx": "",
-      "src/app/components/Component2.tsx": "",
-      "src/app/components/Component3.tsx": "",
-      "src/app/utils/data.ts": "",
-      "src/app/globals.css": "",
-      "tailwind.config.js": ""
-    },
-    "fileCodes": {
       "src/app/page.tsx": "// Main page logic",
       "src/app/layout.tsx": "// Root layout",
       "src/app/components/Component1.tsx": "// Fully functional component",
@@ -141,7 +131,7 @@ Return a **valid JSON object only** (no markdown or comments) with this exact fo
 }
 
 📋 FRONTEND REQUIREMENTS:
-- Use Next.js 13+ App Router
+- Use Next.js App Router
 - Use TypeScript for all files
 - Use Tailwind CSS
 - Use semantic HTML and responsive design
@@ -379,7 +369,7 @@ Strict rules:
 2. Reject prompts asking only for backend code.
 3. Reject prompts asking only for frontend code using non-Next.js frameworks.
 4. Reject prompts for tutorials, explanations, or walkthroughs.
-5. Accept only prompts that can result in a complete usable app using **Next.js**, with a **Node.js backend only if needed or requested**.
+5. Accept only prompts that can result in a complete usable app using **Next.js**, with a **Node.js backend only and only if requested in user prompt**.
 
 Use your judgment when deciding if a backend is required. If the user says "create a landing page" or "build my portfolio site", backend is **not** required. If the user asks for things like "login system", "API", "admin dashboard", "user management", "database", etc., then backend **is** required.
 

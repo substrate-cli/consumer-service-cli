@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+
 	// "path/filepath"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sshfz/consumer-service-substrate/cmd/app/connections"
+	"github.com/sshfz/consumer-service-substrate/internal/helpers"
 	// "github.com/sshfz/consumer-service-substrate/internal/consumers"
 	// "github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	// "github.com/sshfz/consumer-service-substrate/internal/utils"
@@ -34,6 +36,12 @@ func main() {
 
 	//running redis server locally ----
 	connections.InitRedis()
+
+	res, err := helpers.CallAnthropicPrecheck("build me a healthcare saas, just UI, no backend")
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(res, "kkkkkkk")
 
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "substrate-consumer-service, release - 1.0.0")

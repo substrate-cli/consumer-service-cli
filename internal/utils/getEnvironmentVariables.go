@@ -8,7 +8,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type Configuration struct {
+type configuration struct {
 	anthropicKey               string
 	anthropicURL               string
 	anthropicModel             string
@@ -18,12 +18,12 @@ type Configuration struct {
 	openAIKey                  string
 }
 
-var config *Configuration
+var config *configuration
 
 func init() {
 	_ = godotenv.Load()
 
-	config = &Configuration{
+	config = &configuration{
 		anthropicKey:               os.Getenv("ANTHROPIC_KEY"),
 		anthropicURL:               os.Getenv("ANTHROPIC_URL"),
 		anthropicModel:             os.Getenv("ANTHROPIC_MODEL"),

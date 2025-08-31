@@ -55,22 +55,17 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 		log.Println("appPort =>", aPort)
 		appPort = aPort
 
-		result, err := producers.CallLLMNode(spinRequest.Prompt, "test-value")
+		result, err := producers.CallLLMNode(spinRequest.Prompt, *utils.GetAppGenCall())
 		if err != nil {
-
+			log.Println("Error during app generation")
+			return err
 		}
-		// log.Println(result, "ooooooooo")
 
-		// result, err := helpers.CallAnthropicStream(spinRequest.Prompt)
-		// if err != nil {
-		// 	// need to terminate ---
-		// }
-
-		errChan := make(chan error, 2)
+		errChan := make(chan error, 1)
 
 		go func() {
 			path := filepath.Join(rootProjectPath, "app")
-			errChan <- generateCode(path, result["app"].(map[string]interface{}))
+			errChan <- generateCode(path, result["app"].(map[string]any))
 		}()
 
 		var hasError bool

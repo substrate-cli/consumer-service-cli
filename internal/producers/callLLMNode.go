@@ -173,6 +173,7 @@ func CallLLMNode(prompt string, routingKey string) (map[string]interface{}, erro
 
 	log.Printf("✅ Message sent with correlation ID: %s", corrID)
 	log.Printf("🔄 Waiting for reply on queue: %s", replyQueue.Name)
+	log.Println("Routing key => ", routingKey)
 
 	// Set up timeout
 	timeout := time.After(15 * time.Minute) // Adjust timeout as needed

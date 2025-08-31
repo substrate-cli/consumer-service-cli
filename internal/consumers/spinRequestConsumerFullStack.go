@@ -91,10 +91,9 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		appPort = aPort
 
 		///generating backend structure ------
-		var routingKey string = "spin.generateServerStruct.llmrequest"
 		portString := fmt.Sprintf("use port %d for this server", backendPort)
 		serverPrompt := fmt.Sprintf("%s, %s", spinRequest.BackendPrompt, portString)
-		backendStructure, err := producers.CallLLMNode(serverPrompt, routingKey)
+		backendStructure, err := producers.CallLLMNode(serverPrompt, *utils.GetServerStructCall())
 
 		if err != nil {
 			log.Println("there was a problem in generating backend struct.")
@@ -113,8 +112,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 				log.Println(err)
 				errChan <- err
 			}
-			const routingKey1 string = "spin.generateServerCode.llmrequest"
-			serverCode, err = producers.CallLLMNode(string(jsonBytes), routingKey1)
+			serverCode, err = producers.CallLLMNode(string(jsonBytes), *utils.GetServerGenCall())
 			if err != nil {
 				log.Println("Error generating node js code")
 				log.Println(err)
@@ -136,8 +134,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 				log.Println(err)
 				errChan <- err
 			}
-			const routingKey2 string = "spin.generateAppCode.llmrequest"
-			appCode, err = producers.CallLLMNode(string(jsonBytes), routingKey2)
+			appCode, err = producers.CallLLMNode(string(jsonBytes), *utils.GetAppGenFSCall())
 			if err != nil {
 				log.Println("Error generating app code")
 				log.Println(err)
