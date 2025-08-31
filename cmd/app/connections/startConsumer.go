@@ -172,12 +172,13 @@ func handleSpinConsumer(body []byte) error {
 		log.Println("Backend required for cluster")
 		log.Println("Proceeding to generate full stack application")
 		///generating backend prompt -------
-		backendPrompt, err := helpers.CallAnthropicConstructBackendPrompt(payload.Prompt)
+		backendStructPrompt, err := helpers.CallAnthropicConstructBackendPrompt(payload.Prompt)
 		if err != nil {
 			log.Println("Error constrcuting backend prompt")
 			return err
 		}
-		payload.BackendPrompt = backendPrompt
+		log.Println("Backend Struct Prompt => ", backendStructPrompt)
+		payload.BackendPrompt = backendStructPrompt
 		err = consumers.SpinRequestConsumerFullStack(payload)
 	}
 
