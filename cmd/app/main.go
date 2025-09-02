@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sshfz/consumer-service-substrate/cmd/app/connections"
+	"github.com/sshfz/consumer-service-substrate/internal/utils"
 	// "github.com/sshfz/consumer-service-substrate/internal/consumers"
 	// "github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	// "github.com/sshfz/consumer-service-substrate/internal/utils"
@@ -42,7 +43,7 @@ func main() {
 
 	log.Println("****** Getting substrate ready for stream ******")
 	srv := &http.Server{
-		Addr:    ":8090",
+		Addr:    ":" + utils.GetAppPort(),
 		Handler: router,
 	}
 
@@ -55,7 +56,7 @@ func main() {
 	}()
 
 	go func() {
-		log.Println("server running on port http://localhost: 8090")
+		log.Println("server running on port http://localhost:" + utils.GetAppPort())
 		log.Println("Substrate stream prepared, ping a prompt to spin up application")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)

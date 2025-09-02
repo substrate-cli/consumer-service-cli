@@ -8,6 +8,7 @@ import (
 	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	"github.com/sshfz/consumer-service-substrate/internal/consumers"
 	"github.com/sshfz/consumer-service-substrate/internal/helpers"
+	"github.com/sshfz/consumer-service-substrate/internal/utils"
 	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 	"github.com/streadway/amqp"
 )
@@ -124,6 +125,9 @@ func handleSpinConsumer(body []byte) error {
 		return err
 	}
 	log.Println("User prompt => ", payload.Prompt)
+	if utils.GetMode() == "cli" {
+		utils.SetCLIApiKey(payload.ApiKey)
+	}
 	//precheck -------
 	type Response struct {
 		Is_valid_prompt  bool
@@ -175,6 +179,11 @@ func handleSpinConsumer(body []byte) error {
 		backendStructPrompt, err := helpers.CallAnthropicConstructBackendPrompt(payload.Prompt)
 		if err != nil {
 			log.Println("Error constrcuting backend prompt")
+			return err
+		}
+		err = webhooks.PrecheckAction("finished", "backend prompt generated.")
+		if err != nil {
+			log.Println("api-service webhook failed")
 			return err
 		}
 		log.Println("Backend Struct Prompt => ", backendStructPrompt)

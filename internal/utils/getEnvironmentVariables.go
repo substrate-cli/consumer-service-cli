@@ -16,9 +16,12 @@ type configuration struct {
 	anthropicMaxTokensPrecheck string
 	apiServerUrl               string
 	openAIKey                  string
+	port                       string
+	mode                       string
 }
 
 var config *configuration
+var cliApiKey *string
 
 func init() {
 	_ = godotenv.Load()
@@ -31,6 +34,8 @@ func init() {
 		anthropicMaxTokensPrecheck: os.Getenv("ANTHROPIC_MAX_TOKENS_PRECHECK"),
 		apiServerUrl:               os.Getenv("API_SERVER_URL"),
 		openAIKey:                  os.Getenv("OPENAI_KEY"),
+		port:                       os.Getenv("PORT"),
+		mode:                       os.Getenv("MODE"),
 	}
 }
 
@@ -44,6 +49,23 @@ func GetAnthropicURL() string {
 
 func GetAnthropicModel() string {
 	return config.anthropicModel
+}
+
+func GetMode() string {
+	return config.mode
+}
+
+func SetCLIApiKey(key string) {
+	mode := GetMode()
+	if mode == "cli" {
+		cliApiKey = &key
+	} else {
+		log.Println("unable to update api key")
+	}
+}
+
+func GetCLIApiKey() *string {
+	return cliApiKey
 }
 
 func GetAnthropicMaxTokens() int {
@@ -72,4 +94,8 @@ func GetAPIServerUrl() string {
 
 func GetOpenAIKey() string {
 	return config.openAIKey
+}
+
+func GetAppPort() string {
+	return config.port
 }

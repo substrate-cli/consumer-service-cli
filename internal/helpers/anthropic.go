@@ -44,7 +44,11 @@ func CallAnthropicApi(prompt string) (*string, error) {
 	// type AnthropicResponse struct {
 	// 	Content string `json:"content"`
 	// }
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	model := utils.GetAnthropicModel()
 	maxTokens := utils.GetAnthropicMaxTokens()
 	systemPrompt := utils.GetSystemPromptForFullStackCode(3000)
@@ -108,7 +112,11 @@ func CallAnthropicApi(prompt string) (*string, error) {
 func CallAnthropicPrecheck(prompt string) (string, error) {
 	log.Println("Inside Anthropic Engine, Assigning Prompt => ", prompt)
 	log.Println("Calling anthropic precheck, prompt => ", prompt)
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
@@ -137,7 +145,11 @@ func CallAnthropicPrecheck(prompt string) (string, error) {
 
 func CallAnthropicStreamForFullStack(prompt string, serverPort int) (map[string]interface{}, error) {
 	log.Println("Inside Anthropic Engine, Assigning Prompt => ", prompt)
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	maxTokens := utils.GetAnthropicMaxTokens()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
@@ -198,7 +210,11 @@ func CallAnthropicStreamForFullStack(prompt string, serverPort int) (map[string]
 
 func CallAnthropicStream(prompt string) (map[string]interface{}, error) {
 	log.Println("Inside Anthropic Engine, Assigning Prompt => ", prompt)
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	maxTokens := utils.GetAnthropicMaxTokens()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
@@ -277,7 +293,11 @@ func readAsMap(filename string) (map[string]interface{}, error) {
 func CallAnthropicConstructBackendPrompt(prompt string) (string, error) {
 	log.Println("Inside Anthropic Backend Construct, Assigning Prompt => ", prompt)
 	log.Println("Calling anthropic precheck, prompt => ", prompt)
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
@@ -321,7 +341,11 @@ func CallAnthropicError(errorMatch []map[string]string) (map[string]interface{},
 	}
 
 	//
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	maxTokens := utils.GetAnthropicMaxTokens()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey),
@@ -385,7 +409,11 @@ func CallAnthropicError(errorMatch []map[string]string) (map[string]interface{},
 func CallAnthropicUpdateRequestPrecheck(newprompt string, existingPrompt string) (string, error) {
 	log.Println("Inside Anthropic Engine, Assigning Prompt => ", newprompt)
 	log.Println("Calling anthropic precheck, prompt => ", newprompt)
+	cliApiKey := utils.GetCLIApiKey()
 	apiKey := utils.GetAnthropicKey()
+	if cliApiKey != nil {
+		apiKey = *cliApiKey
+	}
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")

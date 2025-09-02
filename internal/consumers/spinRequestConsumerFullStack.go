@@ -18,6 +18,7 @@ import (
 	"github.com/sshfz/consumer-service-substrate/internal/helpers"
 	"github.com/sshfz/consumer-service-substrate/internal/producers"
 	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 )
 
 type SpinRequest struct {
@@ -25,6 +26,7 @@ type SpinRequest struct {
 	Message       string
 	Prompt        string
 	BackendPrompt string
+	ApiKey        string
 }
 
 var backendPort int
@@ -59,6 +61,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if err != nil {
 				log.Print("Unable to create next project")
 			}
+			err = webhooks.PrecheckAction("finished", "next app initialised succesfully.")
+			if err != nil {
+				log.Println("api-service webhook failed")
+			}
 			log.Print("Next JS project initialised.")
 		}()
 		go func() {
@@ -67,6 +73,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			err = createNodeJSProject(path) //create a nodejsproject
 			if err != nil {
 				log.Print("Unable to create node project")
+			}
+			err = webhooks.PrecheckAction("finished", "node js server initialised succesfully.")
+			if err != nil {
+				log.Println("api-service webhook failed")
 			}
 			log.Print("Server project initialised.")
 		}()
@@ -93,15 +103,34 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		///generating backend structure ------
 		portString := fmt.Sprintf("use port %d for this server", backendPort)
 		serverPrompt := fmt.Sprintf("%s, %s", spinRequest.BackendPrompt, portString)
-		backendStructure, err := producers.CallLLMNode(serverPrompt, *utils.GetServerStructCall())
+		str := make(map[string]string)
+		key := utils.GetCLIApiKey()
+		if key != nil {
+			str["apiKey"] = *key
+		}
+		str["prompt"] = serverPrompt
+		jsonBytes, err := json.Marshal(str)
+		if err != nil {
+			log.Println("error parsing prompt struct")
+			log.Println(err)
+		}
+
+		backendStructure, err := producers.CallLLMNode(string(jsonBytes), *utils.GetServerStructCall())
 
 		if err != nil {
 			log.Println("there was a problem in generating backend struct.")
 			log.Println(err)
 			return err
 		}
+		err = webhooks.PrecheckAction("finished", "backend struct generated succesfully.")
+		if err != nil {
+			log.Println("api-service webhook failed")
+		}
 
 		backendStructure["appDescription"] = spinRequest.BackendPrompt
+		if key != nil {
+			backendStructure["apiKey"] = *key
+		}
 		errChan := make(chan error, 2)
 
 		go func() {
@@ -118,6 +147,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 				log.Println(err)
 				errChan <- err
 			}
+			err = webhooks.PrecheckAction("finished", "server code generated succesfully.")
+			if err != nil {
+				log.Println("api-service webhook failed")
+			}
 			errChan <- nil
 		}()
 
@@ -128,6 +161,9 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			baseApiUrl := fmt.Sprintf("http://localhost:%d", backendPort)
 			apis["userPrompt"] = spinRequest.Prompt
 			apis["baseApiUrl"] = baseApiUrl
+			if key != nil {
+				apis["apiKey"] = *key
+			}
 			jsonBytes, err := json.Marshal(apis)
 			if err != nil {
 				log.Println("error parsing backend struct")
@@ -139,6 +175,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 				log.Println("Error generating app code")
 				log.Println(err)
 				errChan <- err
+			}
+			err = webhooks.PrecheckAction("finished", "app code generated succesfully.")
+			if err != nil {
+				log.Println("api-service webhook failed")
 			}
 			errChan <- nil
 		}()
@@ -194,6 +234,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		log.Fatal("One or more tasks failed")
 	} else {
 		log.Println("✅ Cluster running successfully.")
+		err = webhooks.PrecheckAction("finished", "Cluster initialised succesfully.")
+		if err != nil {
+			log.Println("api-service webhook failed")
+		}
 	}
 
 	/// building and running the project on different ports.-----
@@ -201,6 +245,16 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	log.Print("Initiating build and starting projects...")
 	err = runProject(rootProjectPath, true)
 	if err != nil {
+		return err
+	}
+
+	sendPorts := map[string]interface{}{
+		"appPort":    appPort,
+		"serverPort": backendPort,
+	}
+	err = webhooks.CodeGenerationAction("finished", sendPorts)
+	if err != nil {
+		log.Println("Error calling code generation webhook")
 		return err
 	}
 

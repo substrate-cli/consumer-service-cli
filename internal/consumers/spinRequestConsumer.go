@@ -61,6 +61,12 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 			return err
 		}
 
+		err = webhooks.PrecheckAction("finished", "code generation for next app completed.")
+		if err != nil {
+			log.Println("api-service webhook failed")
+			return err
+		}
+
 		errChan := make(chan error, 1)
 
 		go func() {
@@ -80,6 +86,12 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 			log.Fatal("One or more tasks failed")
 		} else {
 			log.Println("Next js project created successfully")
+
+			err = webhooks.PrecheckAction("finished", "code written succesfully.")
+			if err != nil {
+				log.Println("api-service webhook failed")
+				return err
+			}
 		}
 
 	}
@@ -106,6 +118,8 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 		log.Println("Error calling code generation webhook")
 		return err
 	}
+
+	log.Println("code generation webhook proccessed")
 
 	//running build -----
 	// RunBuildCommand2(rootProjectPath)
