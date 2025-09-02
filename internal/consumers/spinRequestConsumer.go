@@ -14,9 +14,9 @@ import (
 )
 
 func SpinRequestConsumer(spinRequest SpinRequest) error {
-	tempProjectName := "sleepyhead_slyme"
+	clusterName := spinRequest.ClusterName
 	homeDir, err := os.UserHomeDir()
-	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", tempProjectName)
+	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
 
 	exists, err := utils.DirExists(rootProjectPath)
 	if err != nil {
@@ -108,7 +108,7 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 		return err
 	}
 
-	db.SaveRedis(tempProjectName, "running")
+	db.SaveRedis(clusterName, "running")
 	// ---- calling api-service api to open websocket ------
 	sendPorts := map[string]interface{}{
 		"appPort": appPort,

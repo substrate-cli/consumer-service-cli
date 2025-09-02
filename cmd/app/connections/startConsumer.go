@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	"github.com/sshfz/consumer-service-substrate/internal/consumers"
 	"github.com/sshfz/consumer-service-substrate/internal/helpers"
 	"github.com/sshfz/consumer-service-substrate/internal/utils"
+
 	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 	"github.com/streadway/amqp"
 )
@@ -119,15 +121,22 @@ func handleSpinConsumer(body []byte) error {
 	log.Printf("inside handle-spin-consumer")
 
 	var payload consumers.SpinRequest
+
 	err := json.Unmarshal(body, &payload)
 	if err != nil {
 		log.Println("failed to decode json")
 		return err
 	}
 	log.Println("User prompt => ", payload.Prompt)
-	if utils.GetMode() == "cli" {
+	if payload.ApiKey != "" {
 		utils.SetCLIApiKey(payload.ApiKey)
 	}
+
+	payload.ClusterName = strings.TrimSpace(payload.ClusterName)
+	if payload.ClusterName == "" || len(payload.ClusterName) == 0 {
+		payload.ClusterName = helpers.GenerateProjectName()
+	}
+
 	//precheck -------
 	type Response struct {
 		Is_valid_prompt  bool

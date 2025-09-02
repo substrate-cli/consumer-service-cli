@@ -133,7 +133,9 @@ func CallAnthropicPrecheck(prompt string) (string, error) {
 		Model: anthropic.ModelClaude4Opus20250514,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return "", err
 	}
 	log.Println("Output tokens, ", message.Usage.OutputTokens)
 	log.Println("Input tokens, ", message.Usage.InputTokens)
@@ -171,7 +173,9 @@ func CallAnthropicStreamForFullStack(prompt string, serverPort int) (map[string]
 		event := stream.Current()
 		err := message.Accumulate(event)
 		if err != nil {
-			panic(err)
+			log.Println("error calling anthropic api")
+			log.Println(err)
+			return nil, err
 		}
 
 		switch eventVariant := event.AsAny().(type) {
@@ -203,7 +207,9 @@ func CallAnthropicStreamForFullStack(prompt string, serverPort int) (map[string]
 	// log.Println("\n✅ Full Streamed Response:", finalOutput, "mmmmmmmmm")
 
 	if stream.Err() != nil {
-		panic(stream.Err())
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return nil, err
 	}
 	return data, nil
 }
@@ -236,7 +242,9 @@ func CallAnthropicStream(prompt string) (map[string]interface{}, error) {
 		event := stream.Current()
 		err := message.Accumulate(event)
 		if err != nil {
-			panic(err)
+			log.Println("error calling anthropic api")
+			log.Println(err)
+			return nil, err
 		}
 
 		switch eventVariant := event.AsAny().(type) {
@@ -273,7 +281,9 @@ func CallAnthropicStream(prompt string) (map[string]interface{}, error) {
 	log.Println("\n✅ Full Streamed Response:", finalOutput, "mmmmmmmmm")
 
 	if stream.Err() != nil {
-		panic(stream.Err())
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return nil, err
 	}
 	return data, nil
 }
@@ -314,7 +324,9 @@ func CallAnthropicConstructBackendPrompt(prompt string) (string, error) {
 		Model: anthropic.ModelClaude4Opus20250514,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return "", err
 	}
 	raw := message.Content[0].Text
 	cleaned := strings.TrimPrefix(raw, "```json\n")
@@ -401,7 +413,9 @@ func CallAnthropicError(errorMatch []map[string]string) (map[string]interface{},
 	log.Println("\n✅ Full Streamed Response:", finalOutput, "mmmmmmmmm")
 
 	if stream.Err() != nil {
-		panic(stream.Err())
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return nil, err
 	}
 	return data, nil
 }
@@ -430,7 +444,9 @@ func CallAnthropicUpdateRequestPrecheck(newprompt string, existingPrompt string)
 		Model: anthropic.ModelClaude4Opus20250514,
 	})
 	if err != nil {
-		panic(err.Error())
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return "", err
 	}
 	raw := message.Content[0].Text
 	cleaned := strings.TrimPrefix(raw, "```json\n")

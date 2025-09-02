@@ -27,15 +27,16 @@ type SpinRequest struct {
 	Prompt        string
 	BackendPrompt string
 	ApiKey        string
+	ClusterName   string
 }
 
 var backendPort int
 var appPort int
 
 func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
-	tempProjectName := "sleepyhead_slyme"
+	clusterName := spinRequest.ClusterName
 	homeDir, err := os.UserHomeDir()
-	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", tempProjectName)
+	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
 	// os.MkdirAll(filepath.Join(rootProjectPath, "app"), os.ModePerm)
 
 	exists, err := utils.DirExists(rootProjectPath)
