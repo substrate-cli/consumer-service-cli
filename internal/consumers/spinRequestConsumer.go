@@ -1,6 +1,7 @@
 package consumers
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -54,8 +55,20 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 		}
 		log.Println("appPort =>", aPort)
 		appPort = aPort
+		str := make(map[string]string)
+		key := utils.GetCLIApiKey()
+		if key != nil {
+			str["apiKey"] = *key
+		}
+		str["prompt"] = spinRequest.Prompt
+		str["model"] = *utils.GetModel()
+		jsonBytes, err := json.Marshal(str)
+		if err != nil {
+			log.Println("error parsing prompt struct")
+			log.Println(err)
+		}
 
-		result, err := producers.CallLLMNode(spinRequest.Prompt, *utils.GetAppGenCall())
+		result, err := producers.CallLLMNode(string(jsonBytes), *utils.GetAppGenCall())
 		if err != nil {
 			log.Println("Error during app generation")
 			return err

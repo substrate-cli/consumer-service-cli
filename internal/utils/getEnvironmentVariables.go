@@ -18,10 +18,14 @@ type configuration struct {
 	openAIKey                  string
 	port                       string
 	mode                       string
+	defaultModel               string
+	openaiMaxTokens            string
+	openaiMaxTokensPrecheck    string
 }
 
 var config *configuration
 var cliApiKey *string
+var currentModel *string
 
 func init() {
 	_ = godotenv.Load()
@@ -32,10 +36,13 @@ func init() {
 		anthropicModel:             os.Getenv("ANTHROPIC_MODEL"),
 		anthropicMaxTokens:         os.Getenv("ANTHROPIC_MAX_TOKENS"),
 		anthropicMaxTokensPrecheck: os.Getenv("ANTHROPIC_MAX_TOKENS_PRECHECK"),
+		openaiMaxTokens:            os.Getenv("OPENAI_MAX_TOKENS"),
+		openaiMaxTokensPrecheck:    os.Getenv("OPENAI_MAX_TOKENS_PRECHECK"),
 		apiServerUrl:               os.Getenv("API_SERVER_URL"),
 		openAIKey:                  os.Getenv("OPENAI_KEY"),
 		port:                       os.Getenv("PORT"),
 		mode:                       os.Getenv("MODE"),
+		defaultModel:               os.Getenv("DEFAULT_MODEL"),
 	}
 }
 
@@ -68,6 +75,14 @@ func GetCLIApiKey() *string {
 	return cliApiKey
 }
 
+func SetModel(modelName string) {
+	currentModel = &modelName
+}
+
+func GetModel() *string {
+	return currentModel
+}
+
 func GetAnthropicMaxTokens() int {
 	maxTokens, err := strconv.Atoi(config.anthropicMaxTokens)
 	if err != nil {
@@ -96,6 +111,30 @@ func GetOpenAIKey() string {
 	return config.openAIKey
 }
 
+func GetOpenAIMaxTokens() int {
+	maxTokens, err := strconv.Atoi(config.anthropicMaxTokens)
+	if err != nil {
+		log.Println("Setting max tokens to 1024")
+		return 1024
+	}
+	log.Println("Setting max tokens to", maxTokens)
+	return maxTokens
+}
+
+func GetOpenAIMaxTokensPrecheck() int {
+	maxTokens, err := strconv.Atoi(config.anthropicMaxTokensPrecheck)
+	if err != nil {
+		log.Println("Setting max tokens to 1024")
+		return 1024
+	}
+	log.Println("Setting max tokens to", maxTokens)
+	return maxTokens
+}
+
 func GetAppPort() string {
 	return config.port
+}
+
+func GetDefaultModel() string {
+	return config.defaultModel
 }

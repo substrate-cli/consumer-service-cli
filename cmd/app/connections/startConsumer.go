@@ -9,6 +9,7 @@ import (
 	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	"github.com/sshfz/consumer-service-substrate/internal/consumers"
 	"github.com/sshfz/consumer-service-substrate/internal/helpers"
+	"github.com/sshfz/consumer-service-substrate/internal/llm"
 	"github.com/sshfz/consumer-service-substrate/internal/utils"
 
 	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
@@ -128,13 +129,27 @@ func handleSpinConsumer(body []byte) error {
 		return err
 	}
 	log.Println("User prompt => ", payload.Prompt)
-	if payload.ApiKey != "" {
+	if payload.ApiKey != "" || len(payload.ApiKey) != 0 {
 		utils.SetCLIApiKey(payload.ApiKey)
 	}
 
 	payload.ClusterName = strings.TrimSpace(payload.ClusterName)
 	if payload.ClusterName == "" || len(payload.ClusterName) == 0 {
 		payload.ClusterName = helpers.GenerateProjectName()
+	}
+
+	payload.Model = strings.TrimSpace(payload.Model)
+	err = helpers.SpecifyModel(payload.Model)
+	if err != nil {
+		return err
+	}
+
+	model := utils.GetModel()
+	client, err := llm.NewLLMClient(*model)
+	if err != nil {
+		log.Println("Error setting provider")
+		log.Println(err)
+		return err
 	}
 
 	//precheck -------
@@ -145,7 +160,7 @@ func handleSpinConsumer(body []byte) error {
 		Requires_backend bool
 	}
 	var response Response
-	res, err := helpers.CallAnthropicPrecheck(payload.Prompt)
+	res, err := client.CallPrecheck(payload.Prompt)
 	if err != nil {
 		log.Println("Error in anthropic precheck.")
 		log.Println(err)
@@ -166,7 +181,7 @@ func handleSpinConsumer(body []byte) error {
 		log.Println("invalid prompt detected for app generation, proceeding to call webhook in api-server")
 		return errors.New("invalid prompt detected for app generation")
 	}
-	///calling webhook for successful precheck -----
+	///calling webhook for successful prechcek -----
 	log.Println("Anthropic Precheck passed, proceeding for code generation...")
 
 	err = webhooks.PrecheckAction("finished", response.Response)
@@ -185,7 +200,7 @@ func handleSpinConsumer(body []byte) error {
 		log.Println("Backend required for cluster")
 		log.Println("Proceeding to generate full stack application")
 		///generating backend prompt -------
-		backendStructPrompt, err := helpers.CallAnthropicConstructBackendPrompt(payload.Prompt)
+		backendStructPrompt, err := client.CallConstructBackendPrompt(payload.Prompt)
 		if err != nil {
 			log.Println("Error constrcuting backend prompt")
 			return err

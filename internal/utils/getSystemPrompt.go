@@ -15,7 +15,6 @@ var systemPromptForPrecheck2 string
 var systemPromptForPrecheck3 string //to check stack.
 var systemPromptForUpdatePrecheck string
 var systemPromptForBackendPromptConstruct string
-var systemPromptToConstructBackendStructure string
 
 var systemPromptForFix string
 
@@ -466,7 +465,8 @@ Output:
     4. Test cases
     5. Mock data (if relevant)  
   - The generated backend prompt should be specific to the user’s request while following the above structure.  
-  - Always phrase the output as an instruction to “Generate a complete Node.js + Express backend …”.  
+  - Always phrase the output as an instruction to “Generate a complete Node.js + Express backend …”. 
+  - The output should always be a simple single line prompt, not a complicated and detailed one.
   
   Example:  
   User prompt: "Build me a portfolio website"  
@@ -474,9 +474,6 @@ Output:
   
   User prompt: "Create an ecommerce store"  
   Output: "Generate a complete Node.js + Express backend with routes, controllers, middleware, test cases, and mock data for an ecommerce store."  
- `
-
-	systemPromptToConstructBackendStructure = `
  `
 }
 
@@ -504,8 +501,4 @@ func GetSystemPromptForUpdatePrecheck(existingPrompt string) *string {
 
 func GetSystemPromptForBackendPromptConstruct() *string {
 	return &systemPromptForBackendPromptConstruct
-}
-
-func GetSystemPromptToConstructBackendStructure() *string {
-	return &systemPromptToConstructBackendStructure
 }

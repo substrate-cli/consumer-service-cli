@@ -28,6 +28,7 @@ type SpinRequest struct {
 	BackendPrompt string
 	ApiKey        string
 	ClusterName   string
+	Model         string
 }
 
 var backendPort int
@@ -110,6 +111,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			str["apiKey"] = *key
 		}
 		str["prompt"] = serverPrompt
+		str["model"] = *utils.GetModel()
 		jsonBytes, err := json.Marshal(str)
 		if err != nil {
 			log.Println("error parsing prompt struct")
@@ -129,6 +131,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 
 		backendStructure["appDescription"] = spinRequest.BackendPrompt
+		backendStructure["model"] = *utils.GetModel()
 		if key != nil {
 			backendStructure["apiKey"] = *key
 		}
@@ -162,6 +165,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			baseApiUrl := fmt.Sprintf("http://localhost:%d", backendPort)
 			apis["userPrompt"] = spinRequest.Prompt
 			apis["baseApiUrl"] = baseApiUrl
+			apis["model"] = *utils.GetModel()
 			if key != nil {
 				apis["apiKey"] = *key
 			}

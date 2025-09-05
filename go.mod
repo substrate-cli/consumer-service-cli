@@ -10,6 +10,8 @@ require (
 	github.com/streadway/amqp v1.1.0
 )
 
+require github.com/openai/openai-go/v2 v2.3.0 // indirect
+
 require (
 	github.com/bytedance/sonic v1.13.3 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
