@@ -45,6 +45,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	var appCode map[string]any
 	if err != nil {
 		log.Println("Error checking directory:", err)
+		errW := webhooks.ErrorAction("finished", "failed to create cluster", "error checking directory")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		return err
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
 	} else {
@@ -76,8 +81,8 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if err != nil {
 				log.Print("Unable to create node project")
 			}
-			err = webhooks.PrecheckAction("finished", "node js server initialised succesfully.")
-			if err != nil {
+			errW := webhooks.PrecheckAction("finished", "node js server initialised succesfully.")
+			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
 			log.Print("Server project initialised.")
@@ -96,7 +101,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 
 		aPort, err := helpers.GetAvailablePort(backendPort+1, 3100)
 		if err != nil {
-			log.Fatalln("no free port available")
+			errW := webhooks.ErrorAction("finished", "error creating cluster", "error getting port")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
+			log.Println("no free port available")
 			return err
 		}
 		log.Println("appPort =>", aPort)
@@ -117,16 +126,23 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			log.Println("error parsing prompt struct")
 			log.Println(err)
 		}
-
+		errW := webhooks.PrecheckAction("finished", "proceeding to generate server struct")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		backendStructure, err := producers.CallLLMNode(string(jsonBytes), *utils.GetServerStructCall())
 
 		if err != nil {
 			log.Println("there was a problem in generating backend struct.")
 			log.Println(err)
+			errW := webhooks.ErrorAction("finished", "error creating cluster", "there was a problem in generating backend struct")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 			return err
 		}
-		err = webhooks.PrecheckAction("finished", "backend struct generated succesfully.")
-		if err != nil {
+		errW = webhooks.PrecheckAction("finished", "backend struct generated succesfully.")
+		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
 
@@ -151,8 +167,8 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 				log.Println(err)
 				errChan <- err
 			}
-			err = webhooks.PrecheckAction("finished", "server code generated succesfully.")
-			if err != nil {
+			errW = webhooks.PrecheckAction("finished", "server code generated succesfully.")
+			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
 			errChan <- nil
@@ -181,8 +197,8 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 				log.Println(err)
 				errChan <- err
 			}
-			err = webhooks.PrecheckAction("finished", "app code generated succesfully.")
-			if err != nil {
+			errW = webhooks.PrecheckAction("finished", "app code generated succesfully.")
+			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
 			errChan <- nil
@@ -197,7 +213,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 
 		if hasError {
-			log.Fatal("💥 One or more tasks failed")
+			log.Fatal("One or more tasks failed")
+			errW := webhooks.ErrorAction("finished", "error creating cluster", "One or more tasks failed")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 		} else {
 			log.Println("✅ Both projects created successfully")
 		}
@@ -208,6 +228,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 
 	if err != nil {
 		log.Fatal("Failed to spin project:", err)
+		errW := webhooks.ErrorAction("finished", "error creating cluster", "failed to spin cluster")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 
@@ -237,10 +261,14 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	}
 	if hasError {
 		log.Fatal("One or more tasks failed")
+		errW := webhooks.ErrorAction("finished", "error creating cluster", "one or more tasks failed")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 	} else {
 		log.Println("✅ Cluster running successfully.")
-		err = webhooks.PrecheckAction("finished", "Cluster initialised succesfully.")
-		if err != nil {
+		errW := webhooks.PrecheckAction("finished", "Cluster initialised succesfully.")
+		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
 	}
@@ -257,10 +285,9 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		"appPort":    appPort,
 		"serverPort": backendPort,
 	}
-	err = webhooks.CodeGenerationAction("finished", sendPorts)
-	if err != nil {
+	errW := webhooks.CodeGenerationAction("finished", sendPorts)
+	if errW != nil {
 		log.Println("Error calling code generation webhook")
-		return err
 	}
 
 	// ---- calling api-service api to open websocket ------

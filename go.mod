@@ -10,7 +10,13 @@ require (
 	github.com/streadway/amqp v1.1.0
 )
 
-require github.com/openai/openai-go/v2 v2.3.0 // indirect
+require (
+	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
+	github.com/go-stack/stack v1.8.1 // indirect
+	github.com/openai/openai-go/v2 v2.3.0 // indirect
+	github.com/playwright-community/playwright-go v0.5200.0 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.13.3 // indirect
@@ -38,7 +44,7 @@ require (
 	github.com/qdrant/go-client v1.15.2 // indirect
 	github.com/redis/go-redis/v9 v9.12.1 // indirect
 	github.com/sashabaranov/go-openai v1.41.1 // indirect
-	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect

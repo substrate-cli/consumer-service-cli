@@ -162,21 +162,28 @@ func handleSpinConsumer(body []byte) error {
 	var response Response
 	res, err := client.CallPrecheck(payload.Prompt)
 	if err != nil {
-		log.Println("Error in anthropic precheck.")
+		log.Println("Error in llm precheck.")
 		log.Println(err)
+		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error())
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 	err = json.Unmarshal([]byte(res), &response)
 	if err != nil {
-		log.Println("Error in decoding anthropic precheck response", err)
+		log.Println("Error in decoding llm precheck response", err)
+		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error())
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 	if !response.Is_valid_prompt {
 		///call webhook in api-server for failed attempt
-		err := webhooks.PrecheckAction("failed", response.Reason)
-		if err != nil {
+		errW := webhooks.ErrorAction("failed", response.Reason, "invalid prompt")
+		if errW != nil {
 			log.Println("api-service webhook failed")
-			return err
 		}
 		log.Println("invalid prompt detected for app generation, proceeding to call webhook in api-server")
 		return errors.New("invalid prompt detected for app generation")
@@ -184,10 +191,9 @@ func handleSpinConsumer(body []byte) error {
 	///calling webhook for successful prechcek -----
 	log.Println("Anthropic Precheck passed, proceeding for code generation...")
 
-	err = webhooks.PrecheckAction("finished", response.Response)
-	if err != nil {
+	errW := webhooks.PrecheckAction("finished", response.Response)
+	if errW != nil {
 		log.Println("api-service webhook failed")
-		return err
 	}
 	log.Println("Proceeding for code generation...")
 	log.Println("Initiating code generation for => ", payload.Prompt)
@@ -196,6 +202,14 @@ func handleSpinConsumer(body []byte) error {
 		log.Println("Backend not required for cluster")
 		log.Println("Proceeding to generate next js code generation.")
 		err = consumers.SpinRequestConsumer(payload)
+		if err != nil {
+			const msg = "Cluster creation failed"
+			errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
+			return err
+		}
 	} else {
 		log.Println("Backend required for cluster")
 		log.Println("Proceeding to generate full stack application")
@@ -203,11 +217,17 @@ func handleSpinConsumer(body []byte) error {
 		backendStructPrompt, err := client.CallConstructBackendPrompt(payload.Prompt)
 		if err != nil {
 			log.Println("Error constrcuting backend prompt")
+			errW = webhooks.ErrorAction("finished", "Error in server generation", "failed to constrcut backend prompt")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 			return err
 		}
-		err = webhooks.PrecheckAction("finished", "backend prompt generated.")
-		if err != nil {
+		errW = webhooks.PrecheckAction("finished", "backend prompt generated.")
+		if errW != nil {
 			log.Println("api-service webhook failed")
+		}
+		if err != nil {
 			return err
 		}
 		log.Println("Backend Struct Prompt => ", backendStructPrompt)
