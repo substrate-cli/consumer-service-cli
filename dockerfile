@@ -1,37 +1,25 @@
-# syntax=docker/dockerfile:1
-
+# consumer-service-cli/Dockerfile
 # Build stage
-FROM golang:1.24.4-alpine AS builder
-
-RUN apk add --no-cache git
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
+# Copy go.mod and go.sum first for caching
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy the rest of the source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o consumer-app ./cmd/app
+# Build the binary
+RUN go build -o consumer-service-cli .
 
-# Runtime stage
+# Run stage
 FROM alpine:latest
+WORKDIR /app
 
-RUN apk --no-cache add ca-certificates
+# Copy the built binary
+COPY --from=builder /app/consumer-service-cli .
 
-WORKDIR /root/
-
-# Copy with absolute paths
-COPY --from=builder /app/consumer-app /root/consumer-app
-
-# Set permissions
-RUN chmod +x /root/consumer-app
-
-# Copy .env file
-COPY .env /root/.env
-
-EXPOSE 8090
-
-# Use absolute path in CMD
-CMD ["/root/consumer-app"]
+# Command to run
+CMD ["./consumer-service-cli"]

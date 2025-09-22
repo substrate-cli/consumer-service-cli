@@ -3,8 +3,8 @@ package llm
 import (
 	"fmt"
 
-	"github.com/sshfz/consumer-service-substrate/internal/interfaces"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/interfaces"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func NewLLMClient(provider string) (interfaces.LLMClient, error) {

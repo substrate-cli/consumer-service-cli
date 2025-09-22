@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/qdrant/go-client/qdrant"
-	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
+	"github.com/substrate-cli/consumer-service-cli/cmd/app/mq"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

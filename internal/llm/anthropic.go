@@ -14,12 +14,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	option "github.com/anthropics/anthropic-sdk-go/option"
-	// vision "github.com/sashabaranov/go-openai"
-	// claude "github.com/potproject/claude-sdk-go"
 )
 
 type AnthropicClient struct {

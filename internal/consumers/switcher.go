@@ -7,12 +7,12 @@ import (
 	"log"
 	"strings"
 
-	"github.com/sshfz/consumer-service-substrate/internal/headless"
-	"github.com/sshfz/consumer-service-substrate/internal/helpers"
-	"github.com/sshfz/consumer-service-substrate/internal/interfaces"
-	"github.com/sshfz/consumer-service-substrate/internal/llm"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
-	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
+	"github.com/substrate-cli/consumer-service-cli/internal/headless"
+	"github.com/substrate-cli/consumer-service-cli/internal/helpers"
+	"github.com/substrate-cli/consumer-service-cli/internal/interfaces"
+	"github.com/substrate-cli/consumer-service-cli/internal/llm"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/webhooks"
 )
 
 // handleTask processes the received task message

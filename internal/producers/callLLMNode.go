@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
+	"github.com/substrate-cli/consumer-service-cli/cmd/app/mq"
 	"github.com/streadway/amqp"
 )
 

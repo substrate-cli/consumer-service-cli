@@ -9,7 +9,7 @@ import (
 
 	"github.com/openai/openai-go/v2"
 	option "github.com/openai/openai-go/v2/option"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 
 	vision "github.com/sashabaranov/go-openai"
 )

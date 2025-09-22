@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
+	"github.com/substrate-cli/consumer-service-cli/cmd/app/mq"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 var ctx = context.Background()
@@ -14,7 +15,7 @@ var rdb *redis.Client
 func InitRedis() {
 	log.Println("Initialising redis....")
 	rdb = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: utils.GetRedisAddr(),
 	})
 	err := rdb.Set(ctx, "test_key", "hello redis", 0).Err()
 	if err != nil {

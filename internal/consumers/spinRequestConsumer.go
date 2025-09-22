@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/sshfz/consumer-service-substrate/internal/db"
-	"github.com/sshfz/consumer-service-substrate/internal/helpers"
-	"github.com/sshfz/consumer-service-substrate/internal/producers"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
-	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
+	"github.com/substrate-cli/consumer-service-cli/internal/db"
+	"github.com/substrate-cli/consumer-service-cli/internal/helpers"
+	"github.com/substrate-cli/consumer-service-cli/internal/producers"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/webhooks"
 )
 
 func SpinRequestConsumerApp(spinRequest SpinRequest) error {

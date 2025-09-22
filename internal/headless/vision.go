@@ -13,7 +13,7 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/sshfz/consumer-service-substrate/internal/interfaces"
+	"github.com/substrate-cli/consumer-service-cli/internal/interfaces"
 )
 
 type WebsiteData struct {

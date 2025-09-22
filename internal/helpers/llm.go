@@ -7,7 +7,7 @@ import (
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	option "github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func CallPrecheck(prompt string) (string, error) {

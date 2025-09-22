@@ -3,9 +3,9 @@ package connections
 import (
 	"log"
 
-	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
-	"github.com/sshfz/consumer-service-substrate/internal/consumers"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/cmd/app/mq"
+	"github.com/substrate-cli/consumer-service-cli/internal/consumers"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 	"github.com/streadway/amqp"
 )
 

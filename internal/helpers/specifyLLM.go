@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func SpecifyModel(modelName string) error {
