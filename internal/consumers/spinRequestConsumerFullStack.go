@@ -99,7 +99,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			log.Println("error parsing prompt struct")
 			log.Println(err)
 		}
-		errW := webhooks.PrecheckAction("finished", "proceeding to generate server struct")
+		errW := webhooks.PrecheckAction("finished", "proceeding to generate server struct... DO NOT QUIT")
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -126,8 +126,13 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 		errChan := make(chan error, 2)
 
+		errW = webhooks.PrecheckAction("finished", "Proceeding to assign LLM... DO NOT QUIT")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
 		go func() {
-			log.Println("Proceeding to generate server code....")
+			log.Println("Proceeding to generate server code... DO NOT QUIT")
 			jsonBytes, err := json.Marshal(backendStructure)
 			if err != nil {
 				log.Println("Error parsing backend structure")
@@ -195,6 +200,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			log.Println("✅ Both projects created successfully")
 		}
 
+		errW = webhooks.PrecheckAction("finished", "Code Generation complete, Initialising cluster... DO NOT QUIT")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
 		log.Println("Server code successfully generated")
 		log.Println("App Code successfully generated")
 	}
@@ -211,6 +221,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	//
 	var wg sync.WaitGroup
 	wg.Add(2)
+	errW := webhooks.PrecheckAction("finished", "Creating Cluster... DO NOT QUIT")
+	if errW != nil {
+		log.Println("api-service webhook failed")
+	}
 	go func() {
 		defer wg.Done()
 		path := filepath.Join(rootProjectPath)
@@ -239,6 +253,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	}()
 	wg.Wait()
 	//
+
+	errW = webhooks.PrecheckAction("finished", "Cluster initialised... warming up...")
+	if errW != nil {
+		log.Println("api-service webhook failed")
+	}
 
 	log.Println("*********Code generation complete*********")
 	log.Println("Proceeding to write codes....")
@@ -290,7 +309,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		"appPort":    appPort,
 		"serverPort": backendPort,
 	}
-	errW := webhooks.CodeGenerationAction("finished", sendPorts)
+	errW = webhooks.CodeGenerationAction("finished", sendPorts)
 	if errW != nil {
 		log.Println("Error calling code generation webhook")
 	}

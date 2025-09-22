@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 
 	"time"
 
@@ -19,21 +20,22 @@ func main() {
 	router := gin.Default()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
+	origins := utils.GetSafeOrigins()
+	parts := strings.Split(origins, ",")
+	safeOrigins := make([]string, 0, len(parts))
+	for _, o := range parts {
+		safeOrigins = append(safeOrigins, strings.TrimSpace(o))
+	}
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "https://your-frontend.com"},
+		AllowOrigins:     safeOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
 
-	//running redis server locally ----
-
 	connections.InitRedis()
-	///
-
-	///
 
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "substrate-consumer-service, release - 1.0.0")

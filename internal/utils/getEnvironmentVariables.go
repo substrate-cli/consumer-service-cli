@@ -22,6 +22,8 @@ type configuration struct {
 	openaiMaxTokens            string
 	openaiMaxTokensPrecheck    string
 	amqpUrl                    string
+	safeOrigins                string
+	redisAddr                  string
 }
 
 var config *configuration
@@ -45,6 +47,8 @@ func init() {
 		mode:                       os.Getenv("MODE"),
 		defaultModel:               os.Getenv("DEFAULT_MODEL"),
 		amqpUrl:                    os.Getenv("AMQP_URL"),
+		safeOrigins:                os.Getenv("SAFE_ORIGINS"),
+		redisAddr:                  os.Getenv("REDIS_ADDR"),
 	}
 }
 
@@ -58,6 +62,14 @@ func GetAnthropicURL() string {
 
 func GetAnthropicModel() string {
 	return config.anthropicModel
+}
+
+func GetSafeOrigins() string {
+	return config.safeOrigins
+}
+
+func GetRedisAddr() string {
+	return config.redisAddr
 }
 
 func GetMode() string {
