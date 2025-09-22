@@ -1,14 +1,12 @@
 package consumers
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +27,7 @@ type SpinRequest struct {
 	ApiKey        string
 	ClusterName   string
 	Model         string
+	IsClone       bool
 }
 
 var backendPort int
@@ -59,35 +58,9 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 
 		log.Println("Directory does not exist")
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			path := filepath.Join(rootProjectPath)
-			err = createNextApp(path) // creating a UI project
-			if err != nil {
-				log.Print("Unable to create next project")
-			}
-			err = webhooks.PrecheckAction("finished", "next app initialised succesfully.")
-			if err != nil {
-				log.Println("api-service webhook failed")
-			}
-			log.Print("Next JS project initialised.")
-		}()
-		go func() {
-			defer wg.Done()
-			path := filepath.Join(rootProjectPath)
-			err = createNodeJSProject(path) //create a nodejsproject
-			if err != nil {
-				log.Print("Unable to create node project")
-			}
-			errW := webhooks.PrecheckAction("finished", "node js server initialised succesfully.")
-			if errW != nil {
-				log.Println("api-service webhook failed")
-			}
-			log.Print("Server project initialised.")
-		}()
-		wg.Wait()
+		//
+
+		//
 		log.Println("Setting up application cluster...")
 		log.Print("Initiating code generation...")
 
@@ -234,6 +207,38 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 		return err
 	}
+
+	//
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		path := filepath.Join(rootProjectPath)
+		err = createNextApp(path) // creating a UI project
+		if err != nil {
+			log.Print("Unable to create next project")
+		}
+		err = webhooks.PrecheckAction("finished", "next app initialised succesfully.")
+		if err != nil {
+			log.Println("api-service webhook failed")
+		}
+		log.Print("Next JS project initialised.")
+	}()
+	go func() {
+		defer wg.Done()
+		path := filepath.Join(rootProjectPath)
+		err = createNodeJSProject(path) //create a nodejsproject
+		if err != nil {
+			log.Print("Unable to create node project")
+		}
+		errW := webhooks.PrecheckAction("finished", "node js server initialised succesfully.")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		log.Print("Server project initialised.")
+	}()
+	wg.Wait()
+	//
 
 	log.Println("*********Code generation complete*********")
 	log.Println("Proceeding to write codes....")
@@ -586,203 +591,4 @@ func runApp(rootPath string) error {
 
 	time.Sleep(5 * time.Second)
 	return nil
-}
-
-func RunBuildCommand(rootPath string) ([]map[string]string, error) {
-	log.Println("executing build just to check everything's smooth...")
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	////////webhook to ve called later ------
-	path := filepath.Join(rootPath, "app")
-	cmd := exec.Command("npm", "run", "build")
-
-	cmd.Dir = path
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	errorsMatch := []map[string]string{}
-
-	if err := cmd.Run(); err != nil {
-		output := stderr.String()
-		re := regexp.MustCompile(`(\.?\/[^\s:()]+)[(:](\d+):(\d+)`)
-		matches1 := re.FindAllStringSubmatch(output, -1)
-
-		// Get the actual error message (rest of output after file line)
-		if len(matches1) > 0 {
-			log.Println(len(matches1), "file")
-
-			blocks := strings.Split(output, "Caused by:")
-			for _, block := range blocks {
-				matches := re.FindAllStringSubmatch(block, -1)
-				if len(matches) > 0 {
-					errorMap := make(map[string]string)
-					filePath := matches[0][1]
-					line := matches[0][2]
-					col := matches[0][3]
-
-					fmt.Println("File:", filePath, "Line:", line, "Col:", col)
-					// fmt.Println("Error snippet:\n", block)
-					fmt.Println("---------------")
-					var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
-					cleanPath := strings.TrimSpace(ansi.ReplaceAllString(filePath, ""))
-					log.Println(cleanPath, "ffffffffff")
-					relativePath := getRelativePathSimple(cleanPath, path)
-					code, err := os.ReadFile(cleanPath)
-					if err != nil {
-						log.Println("Unable to read file")
-						log.Println(err)
-						return nil, err
-					}
-
-					errorMap["filePath"] = string(filePath)
-					errorMap["error_line_number"] = string(line)
-					errorMap["error"] = string(block)
-					errorMap["relativeFilePath"] = relativePath
-					errorMap["actualCode"] = string(code)
-
-					//extracting imports from the file ----
-
-					///
-					errorsMatch = append(errorsMatch, errorMap)
-					// appending also the files which are related
-				}
-			}
-			return errorsMatch, nil
-		} else {
-			return []map[string]string{}, nil
-		}
-	}
-
-	return errorsMatch, nil
-}
-
-func getRelativePathSimple(absolutePath, projectRoot string) string {
-	// Clean paths
-	cleanAbsolute := filepath.Clean(absolutePath)
-	cleanRoot := filepath.Clean(projectRoot)
-
-	// Replace the project root part with empty string
-	if strings.HasPrefix(cleanAbsolute, cleanRoot) {
-		relative := strings.TrimPrefix(cleanAbsolute, cleanRoot)
-		relative = strings.TrimPrefix(relative, "/") // Remove leading slash
-		return relative
-	}
-
-	// If not under project root, try parent directory
-	parentRoot := filepath.Dir(cleanRoot)
-	if strings.HasPrefix(cleanAbsolute, parentRoot) {
-		relative := strings.TrimPrefix(cleanAbsolute, parentRoot)
-		relative = strings.TrimPrefix(relative, "/")
-		return relative
-	}
-
-	return filepath.Base(cleanAbsolute)
-}
-
-func RunBuildCommand2(rootPath string) ([]map[string]string, error) {
-	var out, stderr bytes.Buffer
-	path := filepath.Join(rootPath, "app")
-
-	cmd := exec.Command("npm", "run", "build")
-	cmd.Dir = path
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	errorMap := make(map[string]string)
-	errorsMatch := []map[string]string{}
-
-	if err := cmd.Run(); err != nil {
-		log.Println("Build failed:", stderr.String())
-		output := stderr.String() + out.String()
-
-		// Regex to capture relative path, line/column, and absolute path + message
-		re := regexp.MustCompile(`(?m)\./(.*\.(css|ts|tsx|js|jsx)):(\d+):(\d+)\s*\nSyntax error:\s*(/.*?)(\sThe .+)`)
-		matches := re.FindAllStringSubmatch(output, -1)
-
-		if len(matches) == 0 {
-			log.Println("no build issues found.")
-			return []map[string]string{}, nil
-		}
-
-		for _, m := range matches {
-			relativePath := "/" + m[1] // keep relative path
-			line := m[3]
-			column := m[4]
-			absolutePath := m[5]                // absolute file path
-			errorMsg := strings.TrimSpace(m[6]) // actual error message
-
-			fmt.Printf("File: %s\nLine: %s, Column: %s\nAbsolutePath: %s\nErrorMessage: %s\n\n",
-				relativePath, line, column, absolutePath, errorMsg)
-
-			code, err := os.ReadFile(absolutePath)
-			if err != nil {
-				log.Println(err)
-				return []map[string]string{}, err
-			}
-			log.Println(string(code))
-
-			errorMap["filePath"] = relativePath
-			errorMap["error"] = errorMsg
-			errorsMatch = append(errorsMatch, errorMap)
-
-			// helpers.CallAnthropicError(errorsMatch)
-		}
-	}
-	return errorsMatch, nil
-}
-func RunBuildCommand3(rootPath string) ([]map[string]string, error) {
-	var out, stderr bytes.Buffer
-	path := filepath.Join(rootPath, "app")
-
-	cmd := exec.Command("npm", "run", "build")
-	cmd.Dir = path
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	errorMap := make(map[string]string)
-	errorsMatch := []map[string]string{}
-
-	if err := cmd.Run(); err != nil {
-		log.Println("Build failed:", stderr.String())
-		output := stderr.String() + out.String()
-
-		// Regex to capture relative path, line/column, and absolute path + message
-		re := regexp.MustCompile(`(?m)^(\.\/[^\n]+\.(?:css|ts|tsx|js|jsx))\s*\nError:\s+x\s+([^\n]+)\n\s+,-\[([^\]]+):(\d+):(\d+)\]`)
-		matches := re.FindAllStringSubmatch(output, -1)
-
-		log.Println(matches, "mmmmmmmmmm")
-		if len(matches) == 0 {
-			// log.Println("no build issues found.")
-			altRe := regexp.MustCompile(`(?m)(\.\/[^\s]+\.(?:css|ts|tsx|js|jsx)).*?Error.*?(\d+):(\d+).*?\n.*?([^\n]+)`)
-			matches = altRe.FindAllStringSubmatch(output, -1)
-			log.Println("Alternative matches:", matches)
-		}
-
-		if len(matches) == 0 {
-			log.Println("no build issues found.")
-			return []map[string]string{}, nil
-		}
-
-		for _, m := range matches {
-			relativePath := "/" + m[1] // keep relative path
-			line := m[3]
-			column := m[4]
-			absolutePath := m[5]                // absolute file path
-			errorMsg := strings.TrimSpace(m[6]) // actual error message
-
-			fmt.Printf("File: %s\nLine: %s, Column: %s\nAbsolutePath: %s\nErrorMessage: %s\n\n",
-				relativePath, line, column, absolutePath, errorMsg)
-
-			code, err := os.ReadFile(absolutePath)
-			if err != nil {
-				log.Println(err)
-				return []map[string]string{}, err
-			}
-			log.Println(string(code))
-
-			errorMap["filePath"] = relativePath
-			errorMap["error"] = errorMsg
-			errorsMatch = append(errorsMatch, errorMap)
-
-			// helpers.CallAnthropicError(errorsMatch)
-		}
-	}
-	return errorsMatch, nil
 }

@@ -25,7 +25,7 @@ func CallPrecheck(prompt string) (string, error) {
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),
 		System: []anthropic.TextBlockParam{
-			{Text: *utils.GetSystemPromptForPrecheck()},
+			{Text: utils.GetSystemPromptForPrecheck()},
 		},
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
@@ -61,7 +61,7 @@ func CallConstructBackendPrompt(prompt string) (string, error) {
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),
 		System: []anthropic.TextBlockParam{
-			{Text: *utils.GetSystemPromptForBackendPromptConstruct()},
+			{Text: utils.GetSystemPromptForBackendPromptConstruct()},
 		},
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),

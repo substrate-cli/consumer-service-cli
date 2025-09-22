@@ -14,7 +14,7 @@ import (
 	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 )
 
-func SpinRequestConsumer(spinRequest SpinRequest) error {
+func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	clusterName := spinRequest.ClusterName
 	homeDir, err := os.UserHomeDir()
 	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
@@ -36,26 +36,16 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 
 		log.Println("Directory does not exist")
 		os.MkdirAll(filepath.Join(rootProjectPath, "app"), os.ModePerm)
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			path := filepath.Join(rootProjectPath)
-			err = createNextApp(path) // creating a UI project
-			if err != nil {
-				log.Print("Unable to create next project")
-				log.Println("Error =>", err)
-			}
-			log.Print("Next JS project initialised.")
-		}()
 
-		wg.Wait()
-		errW := webhooks.PrecheckAction("finished", "Next App Initialised")
+		//
+
+		////
+
+		log.Print("Initiating code generation...")
+		errW := webhooks.PrecheckAction("finished", "initiating code generation... DO NOT QUIT")
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
-
-		log.Print("Initiating code generation...")
 
 		aPort, err := helpers.GetAvailablePort(3000, 3100)
 		if err != nil {
@@ -79,21 +69,26 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 		if err != nil {
 			log.Println("error parsing prompt struct")
 			log.Println(err)
-			errW = webhooks.ErrorAction("finished", "cluster creation failed", "error parsing prompt struct")
+			errW := webhooks.ErrorAction("finished", "cluster creation failed", "error parsing prompt struct")
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
 			return err
 		}
-		errW = webhooks.PrecheckAction("finished", "Next App Initialised")
+
+		errW = webhooks.PrecheckAction("finished", "Assigning LLM... DO NOT QUIT")
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
 
-		result, err := producers.CallLLMNode(string(jsonBytes), *utils.GetAppGenCall())
+		routingKey := *utils.GetAppGenCall()
+		if spinRequest.IsClone {
+			routingKey = *utils.GetCloneAppGen()
+		}
+		result, err := producers.CallLLMNode(string(jsonBytes), routingKey)
 		if err != nil {
 			log.Println("Error during app generation")
-			errW = webhooks.ErrorAction("finished", "cluster creation failed", "error during app generation")
+			errW := webhooks.ErrorAction("finished", "cluster creation failed", "error during app generation")
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -105,6 +100,31 @@ func SpinRequestConsumer(spinRequest SpinRequest) error {
 			log.Println("api-service webhook failed")
 			return err
 		}
+
+		///
+		errW = webhooks.PrecheckAction("finished", "Starting Cluster... DO NOT QUIT")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			path := filepath.Join(rootProjectPath)
+			err = createNextApp(path) // creating a UI project
+			if err != nil {
+				log.Print("Unable to create next project")
+				log.Println("Error =>", err)
+			}
+			log.Print("Next JS project initialised.")
+		}()
+
+		wg.Wait()
+		errW = webhooks.PrecheckAction("finished", "Next App Initialised, Proceeding for code generation, DO NOT QUIT")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		///
 
 		errChan := make(chan error, 1)
 

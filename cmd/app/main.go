@@ -7,18 +7,12 @@ import (
 	"os"
 	"os/signal"
 
-	// "path/filepath"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sshfz/consumer-service-substrate/cmd/app/connections"
 	"github.com/sshfz/consumer-service-substrate/internal/utils"
-	// "github.com/sshfz/consumer-service-substrate/internal/consumers"
-	// "github.com/sshfz/consumer-service-substrate/cmd/app/mq"
-	// "github.com/sshfz/consumer-service-substrate/internal/utils"
-	// "github.com/sshfz/consumer-service-substrate/internal/db"
-	// "github.com/sshfz/consumer-service-substrate/internal/helpers"
 )
 
 func main() {
@@ -35,7 +29,11 @@ func main() {
 	}))
 
 	//running redis server locally ----
+
 	connections.InitRedis()
+	///
+
+	///
 
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "substrate-consumer-service, release - 1.0.0")
@@ -78,4 +76,27 @@ func main() {
 	}
 
 	log.Println("server exiting gracefully.")
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
+func findSubstring(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

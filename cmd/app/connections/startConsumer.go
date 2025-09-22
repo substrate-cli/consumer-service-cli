@@ -1,25 +1,18 @@
 package connections
 
 import (
-	"encoding/json"
-	"errors"
 	"log"
-	"strings"
 
 	"github.com/sshfz/consumer-service-substrate/cmd/app/mq"
 	"github.com/sshfz/consumer-service-substrate/internal/consumers"
-	"github.com/sshfz/consumer-service-substrate/internal/helpers"
-	"github.com/sshfz/consumer-service-substrate/internal/llm"
 	"github.com/sshfz/consumer-service-substrate/internal/utils"
-
-	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
 	"github.com/streadway/amqp"
 )
 
 // StartConsumer sets up the RabbitMQ topic consumer
 func StartConsumer() {
 	// Connect to RabbitMQ
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial(utils.GetAMQPUrl())
 	// conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	if err != nil {
 		log.Fatalf("❌ Failed to connect to RabbitMQ: %v", err)
@@ -104,7 +97,7 @@ func StartConsumer() {
 
 			switch m.RoutingKey {
 			case "spin.create":
-				err := handleSpinConsumer(m.Body)
+				err := consumers.HandleSpinConsumer(m.Body)
 				if err != nil {
 					log.Println("❌ SpinRequest failed:", err)
 					return
@@ -114,131 +107,4 @@ func StartConsumer() {
 			}
 		}(msg)
 	}
-}
-
-// handleTask processes the received task message
-func handleSpinConsumer(body []byte) error {
-
-	log.Printf("inside handle-spin-consumer")
-
-	var payload consumers.SpinRequest
-
-	err := json.Unmarshal(body, &payload)
-	if err != nil {
-		log.Println("failed to decode json")
-		return err
-	}
-	log.Println("User prompt => ", payload.Prompt)
-	if payload.ApiKey != "" || len(payload.ApiKey) != 0 {
-		utils.SetCLIApiKey(payload.ApiKey)
-	}
-
-	payload.ClusterName = strings.TrimSpace(payload.ClusterName)
-	if payload.ClusterName == "" || len(payload.ClusterName) == 0 {
-		payload.ClusterName = helpers.GenerateProjectName()
-	}
-
-	payload.Model = strings.TrimSpace(payload.Model)
-	err = helpers.SpecifyModel(payload.Model)
-	if err != nil {
-		return err
-	}
-
-	model := utils.GetModel()
-	client, err := llm.NewLLMClient(*model)
-	if err != nil {
-		log.Println("Error setting provider")
-		log.Println(err)
-		return err
-	}
-
-	//precheck -------
-	type Response struct {
-		Is_valid_prompt  bool
-		Response         string
-		Reason           string
-		Requires_backend bool
-	}
-	var response Response
-	res, err := client.CallPrecheck(payload.Prompt)
-	if err != nil {
-		log.Println("Error in llm precheck.")
-		log.Println(err)
-		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error())
-		if errW != nil {
-			log.Println("api-service webhook failed")
-		}
-		return err
-	}
-	err = json.Unmarshal([]byte(res), &response)
-	if err != nil {
-		log.Println("Error in decoding llm precheck response", err)
-		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error())
-		if errW != nil {
-			log.Println("api-service webhook failed")
-		}
-		return err
-	}
-	if !response.Is_valid_prompt {
-		///call webhook in api-server for failed attempt
-		errW := webhooks.ErrorAction("failed", response.Reason, "invalid prompt")
-		if errW != nil {
-			log.Println("api-service webhook failed")
-		}
-		log.Println("invalid prompt detected for app generation, proceeding to call webhook in api-server")
-		return errors.New("invalid prompt detected for app generation")
-	}
-	///calling webhook for successful prechcek -----
-	log.Println("Anthropic Precheck passed, proceeding for code generation...")
-
-	errW := webhooks.PrecheckAction("finished", response.Response)
-	if errW != nil {
-		log.Println("api-service webhook failed")
-	}
-	log.Println("Proceeding for code generation...")
-	log.Println("Initiating code generation for => ", payload.Prompt)
-
-	if !response.Requires_backend {
-		log.Println("Backend not required for cluster")
-		log.Println("Proceeding to generate next js code generation.")
-		err = consumers.SpinRequestConsumer(payload)
-		if err != nil {
-			const msg = "Cluster creation failed"
-			errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster")
-			if errW != nil {
-				log.Println("api-service webhook failed")
-			}
-			return err
-		}
-	} else {
-		log.Println("Backend required for cluster")
-		log.Println("Proceeding to generate full stack application")
-		///generating backend prompt -------
-		backendStructPrompt, err := client.CallConstructBackendPrompt(payload.Prompt)
-		if err != nil {
-			log.Println("Error constrcuting backend prompt")
-			errW = webhooks.ErrorAction("finished", "Error in server generation", "failed to constrcut backend prompt")
-			if errW != nil {
-				log.Println("api-service webhook failed")
-			}
-			return err
-		}
-		errW = webhooks.PrecheckAction("finished", "backend prompt generated.")
-		if errW != nil {
-			log.Println("api-service webhook failed")
-		}
-		if err != nil {
-			return err
-		}
-		log.Println("Backend Struct Prompt => ", backendStructPrompt)
-		payload.BackendPrompt = backendStructPrompt
-		err = consumers.SpinRequestConsumerFullStack(payload)
-	}
-
-	if err != nil {
-		log.Println("error while spinning up request.")
-		return err
-	}
-	log.Printf("🔧 Processing task: %s", string(body))
-	return nil
 }

@@ -2,6 +2,7 @@ package producers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -119,6 +120,10 @@ func CallLLMNode(prompt string, routingKey string) (map[string]interface{}, erro
 
 				// Acknowledge the message
 				msg.Ack(false)
+
+				if responseStruct.Status == "failed" {
+					return nil, errors.New("unable to create cluster")
+				}
 
 				if responseStruct.Status == "finished" {
 					return responseStruct.Code, nil

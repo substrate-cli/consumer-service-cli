@@ -21,6 +21,7 @@ type configuration struct {
 	defaultModel               string
 	openaiMaxTokens            string
 	openaiMaxTokensPrecheck    string
+	amqpUrl                    string
 }
 
 var config *configuration
@@ -43,6 +44,7 @@ func init() {
 		port:                       os.Getenv("PORT"),
 		mode:                       os.Getenv("MODE"),
 		defaultModel:               os.Getenv("DEFAULT_MODEL"),
+		amqpUrl:                    os.Getenv("AMQP_URL"),
 	}
 }
 
@@ -137,4 +139,8 @@ func GetAppPort() string {
 
 func GetDefaultModel() string {
 	return config.defaultModel
+}
+
+func GetAMQPUrl() string {
+	return config.amqpUrl
 }

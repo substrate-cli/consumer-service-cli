@@ -87,7 +87,7 @@ func PrecheckAction(status string, message string) error {
 }
 
 func ErrorAction(status string, errorMessage string, message string) error {
-	log.Println("inside precheck to call api-server...")
+	log.Println("inside error action to call api-server...")
 	apiServerUrl := utils.GetAPIServerUrl()
 	url := fmt.Sprintf("%s/api/webhook/error", apiServerUrl)
 	var payload map[string]interface{}

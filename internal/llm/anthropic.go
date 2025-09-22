@@ -1,9 +1,13 @@
 package llm
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"time"
 
 	// "fmt"
 	"log"
@@ -14,6 +18,8 @@ import (
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	option "github.com/anthropics/anthropic-sdk-go/option"
+	// vision "github.com/sashabaranov/go-openai"
+	// claude "github.com/potproject/claude-sdk-go"
 )
 
 type AnthropicClient struct {
@@ -31,7 +37,39 @@ func (anthropicClient *AnthropicClient) CallPrecheck(prompt string) (string, err
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),
 		System: []anthropic.TextBlockParam{
-			{Text: *utils.GetSystemPromptForPrecheck()},
+			{Text: utils.GetSystemPromptForPrecheck()},
+		},
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
+		},
+
+		Model: anthropic.ModelClaude4Opus20250514,
+	})
+	if err != nil {
+		log.Println("error calling anthropic api")
+		log.Println(err)
+		return "", err
+	}
+	log.Println("Output tokens, ", message.Usage.OutputTokens)
+	log.Println("Input tokens, ", message.Usage.InputTokens)
+	raw := message.Content[0].Text
+	cleaned := strings.TrimPrefix(raw, "```json\n")
+	cleaned = strings.TrimSuffix(cleaned, "\n```")
+	return cleaned, nil
+}
+
+func (anthropicClient *AnthropicClient) CallGithubTreeScan(prompt string) (string, error) {
+	log.Println("Inside Anthropic Engine, Assigning Prompt => ", prompt)
+	log.Println("Calling anthropic precheck, prompt => ", prompt)
+	apiKey := anthropicClient.APIKey
+	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
+	client := anthropic.NewClient(
+		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
+	)
+	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
+		MaxTokens: int64(maxTokens),
+		System: []anthropic.TextBlockParam{
+			{Text: utils.GetSystemPromptForGithubTreeScan()},
 		},
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
@@ -63,7 +101,7 @@ func (anthropicClient *AnthropicClient) CallConstructBackendPrompt(prompt string
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),
 		System: []anthropic.TextBlockParam{
-			{Text: *utils.GetSystemPromptForBackendPromptConstruct()},
+			{Text: utils.GetSystemPromptForBackendPromptConstruct()},
 		},
 		Messages: []anthropic.MessageParam{
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
@@ -95,100 +133,142 @@ func readAsMap(filename string) (map[string]interface{}, error) {
 	return result, err
 }
 
-func CallAnthropicError(errorMatch []map[string]string) (map[string]interface{}, error) {
-	log.Println("Inside error match...")
-	//
-	var userBlocks []anthropic.ContentBlockParamUnion
-	for _, it := range errorMatch {
-		path := it["filePath"]
-		code := it["actualCode"]
-		line := it["error_line_number"] // string; if int, fmt.Sprint(line)
-		actualErrorInTheFile := it["error"]
+//for vision -------
 
-		// Put each file as its own block. Use a fence to keep code intact.
-		block := fmt.Sprintf(
-			"FILE: %s\nERROR_LINE: %s\n\nERROR_FOUND_FILE: %s\nACTUAL_CODE:\n```\n%s\n```",
-			path, line, actualErrorInTheFile, code,
-		)
-		userBlocks = append(userBlocks, anthropic.NewTextBlock(block))
-	}
-
-	//
-	cliApiKey := utils.GetCLIApiKey()
-	apiKey := utils.GetAnthropicKey()
-	if cliApiKey != nil {
-		apiKey = *cliApiKey
-	}
-	maxTokens := utils.GetAnthropicMaxTokens()
-	client := anthropic.NewClient(
-		option.WithAPIKey(apiKey),
-	)
-
-	stream := client.Messages.NewStreaming(context.TODO(), anthropic.MessageNewParams{
-		MaxTokens: int64(maxTokens),
-		System: []anthropic.TextBlockParam{
-			{Text: *utils.GetSystemPromptForFix()},
-		},
-		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(userBlocks...),
-		},
-		Model: anthropic.ModelClaude4Opus20250514,
-	})
-
-	message := anthropic.Message{}
-
-	for stream.Next() {
-		event := stream.Current()
-		err := message.Accumulate(event)
-		if err != nil {
-			log.Println(err)
-		}
-
-		switch eventVariant := event.AsAny().(type) {
-		case anthropic.ContentBlockDeltaEvent:
-			switch deltaVariant := eventVariant.Delta.AsAny().(type) {
-			case anthropic.TextDelta:
-				// fmt.Printf("%x\n", deltaVariant.Text)
-				print(deltaVariant.Text)
-			}
-
-		}
-	}
-
-	var finalOutput string
-	for _, block := range message.Content {
-		if block.Type == "text" {
-			finalOutput += block.Text
-		}
-	}
-
-	cleaned := strings.TrimPrefix(finalOutput, "```json\n")
-	cleaned = strings.TrimSuffix(cleaned, "\n```")
-
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(cleaned), &data)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	log.Println("\n✅ Full Streamed Response:", finalOutput, "mmmmmmmmm")
-
-	if stream.Err() != nil {
-		log.Println("error calling anthropic api")
-		log.Println(err)
-		return nil, err
-	}
-	return data, nil
+type ClaudeRequest struct {
+	Model     string    `json:"model"`
+	MaxTokens int       `json:"max_tokens"`
+	Messages  []Message `json:"messages"`
 }
 
-func CallAnthropicUpdateRequestPrecheck(newprompt string, existingPrompt string) (string, error) {
-	log.Println("Inside Anthropic Engine, Assigning Prompt => ", newprompt)
-	log.Println("Calling anthropic precheck, prompt => ", newprompt)
-	cliApiKey := utils.GetCLIApiKey()
-	apiKey := utils.GetAnthropicKey()
-	if cliApiKey != nil {
-		apiKey = *cliApiKey
+type Message struct {
+	Role    string    `json:"role"`
+	Content []Content `json:"content"`
+}
+
+type Content struct {
+	Type   string       `json:"type"`
+	Text   string       `json:"text,omitempty"`
+	Source *ImageSource `json:"source,omitempty"`
+}
+
+type ImageSource struct {
+	Type      string `json:"type"`
+	MediaType string `json:"media_type"`
+	Data      string `json:"data"`
+}
+
+type ClaudeResponse struct {
+	Content []struct {
+		Text string `json:"text"`
+		Type string `json:"type"`
+	} `json:"content"`
+	ID           string `json:"id"`
+	Model        string `json:"model"`
+	Role         string `json:"role"`
+	StopReason   string `json:"stop_reason"`
+	StopSequence string `json:"stop_sequence"`
+	Type         string `json:"type"`
+	Usage        struct {
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+	} `json:"usage"`
+}
+
+func (claudeClient *AnthropicClient) VisionAnalysis(screenshot string, url string, title string, isRepo bool) (string, error) {
+	if screenshot == "" {
+		return "No screenshot available", nil
 	}
+
+	// Get prompt using your existing utils function
+	sys := utils.GetVisionAnalysisPromptForUrl(url, title)
+	if isRepo {
+		sys = utils.GetVisionAnalysisForRepo()
+	}
+
+	// Create request payload
+	request := ClaudeRequest{
+		Model:     "claude-sonnet-4-20250514", // Use the latest vision-capable model
+		MaxTokens: 16000,
+		Messages: []Message{
+			{
+				Role: "user",
+				Content: []Content{
+					{
+						Type: "text",
+						Text: sys,
+					},
+					{
+						Type: "image",
+						Source: &ImageSource{
+							Type:      "base64",
+							MediaType: "image/png",
+							Data:      screenshot, // Already base64 encoded from rod
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Marshal request to JSON
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// Set timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Create HTTP request
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", claudeClient.APIKey)
+	req.Header.Set("anthropic-version", "2023-06-01")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response
+	var claudeResp ClaudeResponse
+	if err := json.Unmarshal(body, &claudeResp); err != nil {
+		return "", fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	if len(claudeResp.Content) == 0 {
+		return "", fmt.Errorf("no response from Claude")
+	}
+
+	raw := claudeResp.Content[0].Text
+	// Clean up the response similar to your OpenAI function
+	cleaned := strings.TrimPrefix(raw, "```json\n")
+	cleaned = strings.TrimSuffix(cleaned, "\n```")
+
+	return cleaned, nil
+}
+
+func (anthropicClient *AnthropicClient) CallPrePromptForGithubClone(description string) (string, error) {
+	log.Println("Inside Anthropic Engine, Assigning Prompt => ", description)
+	log.Println("Calling anthropic precheck, prompt => ", description)
+	apiKey := anthropicClient.APIKey
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
 		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
@@ -196,10 +276,10 @@ func CallAnthropicUpdateRequestPrecheck(newprompt string, existingPrompt string)
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),
 		System: []anthropic.TextBlockParam{
-			{Text: *utils.GetSystemPromptForUpdatePrecheck(existingPrompt)},
+			{Text: utils.GetSystemPromptForPrePromptGithub()},
 		},
 		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(newprompt)),
+			anthropic.NewUserMessage(anthropic.NewTextBlock(description)),
 		},
 
 		Model: anthropic.ModelClaude4Opus20250514,
@@ -209,6 +289,8 @@ func CallAnthropicUpdateRequestPrecheck(newprompt string, existingPrompt string)
 		log.Println(err)
 		return "", err
 	}
+	log.Println("Output tokens, ", message.Usage.OutputTokens)
+	log.Println("Input tokens, ", message.Usage.InputTokens)
 	raw := message.Content[0].Text
 	cleaned := strings.TrimPrefix(raw, "```json\n")
 	cleaned = strings.TrimSuffix(cleaned, "\n```")

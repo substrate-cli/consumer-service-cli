@@ -5,6 +5,7 @@ type requestSpin struct {
 	serverGenCall    string
 	appGenFSCall     string
 	appGenCall       string
+	cloneAppGen      string
 }
 
 type constantsConfig struct {
@@ -20,6 +21,7 @@ func init() {
 			serverGenCall:    "spin.generateServerCode.llmrequest",
 			appGenFSCall:     "spin.generateAppFSCode.llmrequest",
 			appGenCall:       "spin.generateAppCode.llmrequest",
+			cloneAppGen:      "spin.generateCloneAppCode.llmrequest",
 		},
 	}
 }
@@ -38,4 +40,8 @@ func GetAppGenFSCall() *string {
 
 func GetAppGenCall() *string {
 	return &constants.requestSpin.appGenCall
+}
+
+func GetCloneAppGen() *string {
+	return &constants.requestSpin.cloneAppGen
 }

@@ -13,9 +13,17 @@ require (
 require (
 	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
+	github.com/go-rod/rod v0.114.5 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
-	github.com/openai/openai-go/v2 v2.3.0 // indirect
+	github.com/openai/openai-go/v2 v2.4.0 // indirect
 	github.com/playwright-community/playwright-go v0.5200.0 // indirect
+	github.com/potproject/claude-sdk-go v1.3.2 // indirect
+	github.com/tmaxmax/go-sse v0.8.0 // indirect
+	github.com/ysmood/fetchup v0.2.3 // indirect
+	github.com/ysmood/goob v0.4.0 // indirect
+	github.com/ysmood/got v0.34.1 // indirect
+	github.com/ysmood/gson v0.7.3 // indirect
+	github.com/ysmood/leakless v0.8.0 // indirect
 )
 
 require (
@@ -43,7 +51,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/qdrant/go-client v1.15.2 // indirect
 	github.com/redis/go-redis/v9 v9.12.1 // indirect
-	github.com/sashabaranov/go-openai v1.41.1 // indirect
+	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/tidwall/gjson v1.17.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
