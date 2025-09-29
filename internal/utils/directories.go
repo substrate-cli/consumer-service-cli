@@ -39,3 +39,14 @@ func DirExists(path string) (bool, error) {
 	}
 	return info.IsDir(), nil
 }
+
+func DeleteFile(filePath string) error {
+	err := os.RemoveAll(filePath)
+	if err != nil {
+		log.Println("Error deleting file:", err)
+		return err
+	}
+
+	log.Println("File deleted successfully")
+	return nil
+}

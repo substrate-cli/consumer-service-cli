@@ -1,6 +1,6 @@
 # consumer-service-cli/Dockerfile
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -12,11 +12,17 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN go build -o consumer-service-cli .
+RUN go build -o consumer-service-cli ./cmd/app
 
 # Run stage
 FROM alpine:latest
 WORKDIR /app
+
+# Install curl + docker-cli + nodejs + npm
+RUN apk add --no-cache curl docker-cli nodejs npm docker-compose
+
+# Check versions
+RUN node --version && npm --version && npx --version && docker --version
 
 # Copy the built binary
 COPY --from=builder /app/consumer-service-cli .

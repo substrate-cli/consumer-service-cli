@@ -10,6 +10,8 @@ type requestSpin struct {
 
 type constantsConfig struct {
 	requestSpin requestSpin
+	dockerNext  string
+	dockerNode  string
 }
 
 var constants *constantsConfig
@@ -23,6 +25,8 @@ func init() {
 			appGenCall:       "spin.generateAppCode.llmrequest",
 			cloneAppGen:      "spin.generateCloneAppCode.llmrequest",
 		},
+		dockerNext: "next",
+		dockerNode: "nodejs",
 	}
 }
 
@@ -44,4 +48,12 @@ func GetAppGenCall() *string {
 
 func GetCloneAppGen() *string {
 	return &constants.requestSpin.cloneAppGen
+}
+
+func GetDockerNext() *string {
+	return &constants.dockerNext
+}
+
+func GetDockerNode() *string {
+	return &constants.dockerNode
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,8 +36,11 @@ var appPort int
 
 func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	clusterName := spinRequest.ClusterName
-	homeDir, err := os.UserHomeDir()
-	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
+	rootProjectPath, err := utils.GetHomeDirectory()
+	if err != nil {
+		return err
+	}
+	rootProjectPath = filepath.Join(rootProjectPath, "substrate-home", clusterName)
 	// os.MkdirAll(filepath.Join(rootProjectPath, "app"), os.ModePerm)
 
 	exists, err := utils.DirExists(rootProjectPath)
@@ -267,13 +271,13 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	go func() {
 		result := appCode
 		path := filepath.Join(rootProjectPath, "app")
-		errChan <- generateCode(path, result["app"].(map[string]any))
+		errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext())
 	}()
 
 	go func() {
 		result := serverCode
 		path := filepath.Join(rootProjectPath, "server")
-		errChan <- generateCode(path, result["server"].(map[string]any))
+		errChan <- generateCode(path, result["server"].(map[string]any), *utils.GetDockerNode())
 	}()
 
 	var hasError bool
@@ -284,11 +288,12 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 	}
 	if hasError {
-		log.Fatal("One or more tasks failed")
+		log.Println("One or more tasks failed")
 		errW := webhooks.ErrorAction("finished", "error creating cluster", "one or more tasks failed")
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
+		return err
 	} else {
 		log.Println("✅ Cluster running successfully.")
 		errW := webhooks.PrecheckAction("finished", "Cluster initialised succesfully.")
@@ -300,7 +305,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	/// building and running the project on different ports.-----
 
 	log.Print("Initiating build and starting projects...")
-	err = runProject(rootProjectPath, true)
+	err = runProject(rootProjectPath, true, spinRequest.ClusterName, true)
 	if err != nil {
 		return err
 	}
@@ -313,6 +318,8 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	if errW != nil {
 		log.Println("Error calling code generation webhook")
 	}
+
+	log.Println("cluster running...")
 
 	// ---- calling api-service api to open websocket ------
 	// sendPorts := map[string]interface{}{
@@ -329,10 +336,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 
 func createNextApp(projectPath string) error {
 	// basePath := filepath.Join(projectPath)
-
 	// 🔹 Create Next.js app using npx (must be installed globally)
 	cmd := exec.Command(
-		"npx", "create-next-app@latest",
+		"npx",
+		"--yes",
+		"create-next-app@latest",
 		"app",
 		"--ts",
 		"--eslint",
@@ -347,6 +355,7 @@ func createNextApp(projectPath string) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		log.Println(err)
 		return err
 	}
 	projectPath = filepath.Join(projectPath, "app")
@@ -438,10 +447,9 @@ func createNodeJSProject(projectPath string) error {
 	return nil
 }
 
-func generateCode(appPath string, data map[string]interface{}) error {
+func generateCode(appPath string, data map[string]interface{}, structure string) error {
 	rawMap, ok := data["fileStructure"].(map[string]interface{})
 	rawLibraries, ok2 := data["libraries"].([]interface{})
-	log.Print("kkkkkkkk", rawLibraries)
 	var libraries []string
 	if !ok2 {
 		log.Println("libraries key not found or not an array")
@@ -460,6 +468,13 @@ func generateCode(appPath string, data map[string]interface{}) error {
 	}
 
 	fileMap := make(map[string]string)
+
+	if utils.GetBundle() == "docker" {
+		dockerfile := helpers.GetDockerFile(structure)
+		rawMap["dockerfile"] = map[string]interface{}{
+			"code": dockerfile,
+		} //only for next js for now -----
+	}
 
 	for path, content := range rawMap {
 
@@ -546,27 +561,30 @@ func installLibraries(rootPath string, libraries []string) error {
 	return nil
 }
 
-func runProject(rootPath string, isbackend bool) error {
+func runProject(rootPath string, isbackend bool, cluster string, isFS bool) error {
 	type error interface {
 		Error() string
 	}
 	var err error
 	if isbackend {
-		err = runServer(rootPath)
+
+		err = runServer(rootPath, cluster, isFS)
 		if err != nil {
-			log.Fatal("Failed to start server")
+			log.Println("Failed to start server")
+			log.Println(err)
 			return err
 		}
 	}
-	err = runApp(rootPath)
+	err = runApp(rootPath, cluster, isFS)
 	if err != nil {
-		log.Fatal("Failed to start app")
+		log.Println("Failed to start app")
+		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func runServer(rootPath string) error {
+func runServer(rootPath string, cluster string, isFS bool) error {
 	path := filepath.Join(rootPath, "server")
 	cmd := exec.Command("npm", "run", "dev")
 	// port, err := helpers.GetAvailablePort(3000, 3100)
@@ -574,6 +592,9 @@ func runServer(rootPath string) error {
 	// 	log.Println("Terminating execution, no free port available.")
 	// 	return err
 	// }
+	if utils.GetBundle() == "docker" && isFS {
+		return nil
+	}
 	cmd.Dir = path // same as cwd
 	log.Println("server will start on PORT =>", backendPort)
 	cmd.Env = append(os.Environ(), "PORT="+strconv.Itoa(backendPort))
@@ -590,7 +611,7 @@ func runServer(rootPath string) error {
 	return nil
 }
 
-func runApp(rootPath string) error {
+func runApp(rootPath string, cluster string, isFS bool) error {
 	path := filepath.Join(rootPath, "app")
 	cmd := exec.Command("npm", "run", "dev")
 	log.Println("starting next js server...")
@@ -598,6 +619,89 @@ func runApp(rootPath string) error {
 	// 	log.Println("Terminating execution, no free port available.")
 	// 	return err
 	// }
+	if utils.GetBundle() == "docker" && !isFS {
+		imageName := fmt.Sprintf("%s:latest", cluster)
+		containerName := cluster
+		buildCmd := exec.Command("docker", "build", "-t", imageName, path)
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Stderr = os.Stderr
+		if err := buildCmd.Run(); err != nil {
+			fmt.Println("❌ Error building image:", err)
+			return err
+		}
+
+		//gettign post from host machine -----
+		ln, _ := net.Listen("tcp", ":0")
+		hostPort := ln.Addr().(*net.TCPAddr).Port
+		ln.Close()
+
+		runCmd := exec.Command("docker", "run",
+			"-d", "--rm",
+			"--name", containerName,
+			"-p", fmt.Sprintf("%d:3000", hostPort),
+			imageName,
+		)
+
+		// run docker container
+		output, err := runCmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error:", err)
+			fmt.Println("Output:", string(output))
+			return err
+		}
+
+		// container ID returned by docker
+		containerID := string(output)
+		fmt.Printf("Container startedddddddddddd333333333333333: %s\n", containerID)
+		fmt.Printf("App is running on http://localhost:%d\n", hostPort)
+
+		fmt.Println("✅ Generated app container started")
+		path = filepath.Join(path, "node_modules")
+		utils.DeleteFile(path)
+		return nil
+	}
+
+	if utils.GetBundle() == "docker" && isFS {
+		//running docker-compose ----
+		ln1, _ := net.Listen("tcp", ":0")
+		backendPort := ln1.Addr().(*net.TCPAddr).Port
+
+		ln2, _ := net.Listen("tcp", ":0")
+		appPort := ln2.Addr().(*net.TCPAddr).Port
+
+		ln1.Close()
+		ln2.Close()
+
+		compose := helpers.GetDockerCompose(backendPort, appPort, cluster)
+		composePath := filepath.Join(rootPath, "docker-compose.yml")
+		_ = utils.WriteFiles(composePath, compose)
+
+		buildCmd := exec.Command("docker", "compose", "build")
+		buildCmd.Dir = rootPath
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Stderr = os.Stderr
+		if err := buildCmd.Run(); err != nil {
+			fmt.Println("❌ Error building image:", err)
+			return err
+		}
+
+		runCmd := exec.Command("docker-compose", "up", "-d")
+		runCmd.Dir = rootPath
+		output, err := runCmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error:", err)
+			fmt.Println("Output:", string(output))
+			return err
+		}
+
+		path = filepath.Join(rootPath, "server", "node_modules")
+		utils.DeleteFile(path)
+
+		path = filepath.Join(rootPath, "app", "node_modules")
+		utils.DeleteFile(path)
+
+		return nil
+	}
 	cmd.Dir = path // same as cwd
 	cmd.Env = append(os.Environ(), "PORT="+strconv.Itoa(appPort))
 	cmd.Stdout = os.Stdout

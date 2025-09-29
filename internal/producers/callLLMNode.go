@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/substrate-cli/consumer-service-cli/cmd/app/mq"
 	"github.com/streadway/amqp"
+	"github.com/substrate-cli/consumer-service-cli/cmd/app/mq"
 )
 
 var exchangeName = "dev.topic.spinrequest"
@@ -123,6 +123,10 @@ func CallLLMNode(prompt string, routingKey string) (map[string]interface{}, erro
 
 				if responseStruct.Status == "failed" {
 					return nil, errors.New("unable to create cluster")
+				}
+
+				if responseStruct.Code == nil {
+					return nil, errors.New("Undefined code structure")
 				}
 
 				if responseStruct.Status == "finished" {

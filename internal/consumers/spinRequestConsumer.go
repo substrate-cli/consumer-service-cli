@@ -16,8 +16,11 @@ import (
 
 func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	clusterName := spinRequest.ClusterName
-	homeDir, err := os.UserHomeDir()
-	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
+	rootProjectPath, err := utils.GetHomeDirectory()
+	if err != nil {
+		return err
+	}
+	rootProjectPath = filepath.Join(rootProjectPath, "substrate-home", clusterName)
 
 	exists, err := utils.DirExists(rootProjectPath)
 	if err != nil {
@@ -120,6 +123,13 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		}()
 
 		wg.Wait()
+		if err != nil {
+			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
+			return err
+		}
 		errW = webhooks.PrecheckAction("finished", "Next App Initialised, Proceeding for code generation, DO NOT QUIT")
 		if errW != nil {
 			log.Println("api-service webhook failed")
@@ -130,7 +140,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 
 		go func() {
 			path := filepath.Join(rootProjectPath, "app")
-			errChan <- generateCode(path, result["app"].(map[string]any))
+			errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext())
 		}()
 
 		var hasError bool
@@ -158,13 +168,13 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	}
 
 	if err != nil {
-		log.Println(err)
+		log.Println(err, "oooooooooo")
 		return err
 	}
 	/// building and running the project on different ports.-----
 
 	log.Print("Initiating build and starting projects...")
-	err = runProject(rootProjectPath, false)
+	err = runProject(rootProjectPath, false, spinRequest.ClusterName, false)
 	if err != nil {
 		errW := webhooks.ErrorAction("finished", "cluster created, but failed to run.", "failed to run project")
 		if errW != nil {

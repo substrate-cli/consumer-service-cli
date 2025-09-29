@@ -24,6 +24,7 @@ type configuration struct {
 	amqpUrl                    string
 	safeOrigins                string
 	redisAddr                  string
+	bundle                     string
 }
 
 var config *configuration
@@ -49,6 +50,7 @@ func init() {
 		amqpUrl:                    os.Getenv("AMQP_URL"),
 		safeOrigins:                os.Getenv("SAFE_ORIGINS"),
 		redisAddr:                  os.Getenv("REDIS_ADDR"),
+		bundle:                     os.Getenv("BUNDLE"),
 	}
 }
 
@@ -62,6 +64,10 @@ func GetAnthropicURL() string {
 
 func GetAnthropicModel() string {
 	return config.anthropicModel
+}
+
+func GetBundle() string {
+	return config.bundle
 }
 
 func GetSafeOrigins() string {
