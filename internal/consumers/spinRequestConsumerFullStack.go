@@ -310,6 +310,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		return err
 	}
 
+	log.Println(appPort, backendPort, "ooooooooo")
 	sendPorts := map[string]interface{}{
 		"appPort":    appPort,
 		"serverPort": backendPort,
@@ -470,6 +471,14 @@ func generateCode(appPath string, data map[string]interface{}, structure string)
 	fileMap := make(map[string]string)
 
 	if utils.GetBundle() == "docker" {
+		log.Println("docker environment detected...")
+		log.Println("generating docker file for => ", structure)
+		stm := fmt.Sprintf("Generating dockerfile for %s", structure)
+		errW := webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
 		dockerfile := helpers.GetDockerFile(structure)
 		rawMap["dockerfile"] = map[string]interface{}{
 			"code": dockerfile,
@@ -593,8 +602,10 @@ func runServer(rootPath string, cluster string, isFS bool) error {
 	// 	return err
 	// }
 	if utils.GetBundle() == "docker" && isFS {
+		log.Println("docker environment detected for server...")
 		return nil
 	}
+
 	cmd.Dir = path // same as cwd
 	log.Println("server will start on PORT =>", backendPort)
 	cmd.Env = append(os.Environ(), "PORT="+strconv.Itoa(backendPort))
@@ -620,20 +631,45 @@ func runApp(rootPath string, cluster string, isFS bool) error {
 	// 	return err
 	// }
 	if utils.GetBundle() == "docker" && !isFS {
+		log.Println("docker environment detected for cluster...")
 		imageName := fmt.Sprintf("%s:latest", cluster)
 		containerName := cluster
 		buildCmd := exec.Command("docker", "build", "-t", imageName, path)
 		buildCmd.Stdout = os.Stdout
 		buildCmd.Stderr = os.Stderr
+
+		stm := "building docker image for app... DO NOT QUIT"
+		errW := webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
 		if err := buildCmd.Run(); err != nil {
 			fmt.Println("❌ Error building image:", err)
 			return err
 		}
 
+		stm = "docker image build successful... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
 		//gettign post from host machine -----
+		stm = "searching for free port on host machine... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
 		ln, _ := net.Listen("tcp", ":0")
 		hostPort := ln.Addr().(*net.TCPAddr).Port
 		ln.Close()
+
+		stm = "Warming container in docker daemon... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
 
 		runCmd := exec.Command("docker", "run",
 			"-d", "--rm",
@@ -650,10 +686,22 @@ func runApp(rootPath string, cluster string, isFS bool) error {
 			return err
 		}
 
+		stm = "cluster running in container... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
 		// container ID returned by docker
 		containerID := string(output)
-		fmt.Printf("Container startedddddddddddd333333333333333: %s\n", containerID)
+		fmt.Printf("Container started: %s\n", containerID)
 		fmt.Printf("App is running on http://localhost:%d\n", hostPort)
+
+		stm = "cluster running on " + strconv.Itoa(hostPort)
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
 
 		fmt.Println("✅ Generated app container started")
 		path = filepath.Join(path, "node_modules")
@@ -663,6 +711,12 @@ func runApp(rootPath string, cluster string, isFS bool) error {
 
 	if utils.GetBundle() == "docker" && isFS {
 		//running docker-compose ----
+		log.Println("docker environment detected for cluster...")
+		stm := "finding free ports on host machine... DO NOT QUIT"
+		errW := webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
 		ln1, _ := net.Listen("tcp", ":0")
 		backendPort := ln1.Addr().(*net.TCPAddr).Port
 
@@ -672,9 +726,21 @@ func runApp(rootPath string, cluster string, isFS bool) error {
 		ln1.Close()
 		ln2.Close()
 
+		stm = "Writing Docker Compose to warm up cluster... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
 		compose := helpers.GetDockerCompose(backendPort, appPort, cluster)
 		composePath := filepath.Join(rootPath, "docker-compose.yml")
 		_ = utils.WriteFiles(composePath, compose)
+
+		stm = "Docker compose acknowledged, building images... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
 
 		buildCmd := exec.Command("docker", "compose", "build")
 		buildCmd.Dir = rootPath
@@ -683,6 +749,12 @@ func runApp(rootPath string, cluster string, isFS bool) error {
 		if err := buildCmd.Run(); err != nil {
 			fmt.Println("❌ Error building image:", err)
 			return err
+		}
+
+		stm = "build successful, warming up containers... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
 		}
 
 		runCmd := exec.Command("docker-compose", "up", "-d")
@@ -694,11 +766,19 @@ func runApp(rootPath string, cluster string, isFS bool) error {
 			return err
 		}
 
+		stm = "Containers running..."
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
 		path = filepath.Join(rootPath, "server", "node_modules")
 		utils.DeleteFile(path)
 
 		path = filepath.Join(rootPath, "app", "node_modules")
 		utils.DeleteFile(path)
+
+		fmt.Printf("App is running on http://localhost:%d\n", appPort)
 
 		return nil
 	}
