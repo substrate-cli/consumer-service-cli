@@ -141,6 +141,14 @@ func HandleSpinConsumer(body []byte) error {
 			log.Println("Backend Struct Prompt => ", backendStructPrompt)
 			payload.BackendPrompt = backendStructPrompt
 			err = SpinRequestConsumerFullStack(payload)
+			if err != nil {
+				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to generate clone")
+				if errW != nil {
+					log.Println("api-service webhook failed")
+				}
+
+				return err
+			}
 			return nil
 		}
 		//

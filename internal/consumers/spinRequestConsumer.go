@@ -28,6 +28,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		log.Println("Error checking directory:", err)
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
+		return errors.New("Directory already exists pls choose a different for the project.")
 	} else {
 		if err != nil {
 			errW := webhooks.ErrorAction("finished", "failed to create cluster", "error checking directory")
@@ -158,7 +159,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
-			return err
+			return errors.New("One or more tasks failed on LLM call")
 		} else {
 			log.Println("Next js project created successfully")
 			errW = webhooks.PrecheckAction("finished", "code written succesfully.")
@@ -169,7 +170,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	}
 
 	if err != nil {
-		log.Println(err, "oooooooooo")
+		log.Println(err)
 		return err
 	}
 	/// building and running the project on different ports.-----

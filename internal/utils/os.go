@@ -7,7 +7,7 @@ import (
 )
 
 func GetHomeDirectory() (string, error) {
-	if GetBundle() == "dockeuihuigr" {
+	if GetBundle() == "docker" {
 		return "/apps", nil
 	}
 	homedir, err := os.UserHomeDir()

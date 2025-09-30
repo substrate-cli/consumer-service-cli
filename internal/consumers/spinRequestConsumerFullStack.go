@@ -210,6 +210,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
+			return errors.New("One or more tasks failed on LLM call")
 		} else {
 			log.Println("✅ Both projects created successfully")
 		}
