@@ -16,6 +16,7 @@ type configuration struct {
 	anthropicMaxTokensPrecheck string
 	apiServerUrl               string
 	openAIKey                  string
+	geminiKey                  string
 	port                       string
 	mode                       string
 	defaultModel               string
@@ -44,6 +45,7 @@ func init() {
 		openaiMaxTokensPrecheck:    os.Getenv("OPENAI_MAX_TOKENS_PRECHECK"),
 		apiServerUrl:               os.Getenv("API_SERVER_URL"),
 		openAIKey:                  os.Getenv("OPENAI_KEY"),
+		geminiKey:                  os.Getenv("GEMINI_API_KEY"),
 		port:                       os.Getenv("PORT"),
 		mode:                       os.Getenv("MODE"),
 		defaultModel:               os.Getenv("DEFAULT_MODEL"),
@@ -129,6 +131,10 @@ func GetAPIServerUrl() string {
 
 func GetOpenAIKey() string {
 	return config.openAIKey
+}
+
+func GetGeminiApiKey() string {
+	return config.geminiKey
 }
 
 func GetOpenAIMaxTokens() int {

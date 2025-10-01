@@ -25,6 +25,10 @@ func HandleSpinConsumer(body []byte) error {
 	err := json.Unmarshal(body, &payload)
 	if err != nil {
 		log.Println("failed to decode json")
+		errW := webhooks.ErrorAction("failed", "failed to decode json", err.Error())
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 	log.Println("User prompt => ", payload.Prompt)
@@ -40,6 +44,10 @@ func HandleSpinConsumer(body []byte) error {
 	payload.Model = strings.TrimSpace(payload.Model)
 	err = helpers.SpecifyModel(payload.Model)
 	if err != nil {
+		errW := webhooks.ErrorAction("failed", "invalid model reference", err.Error())
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 
@@ -48,6 +56,10 @@ func HandleSpinConsumer(body []byte) error {
 	if err != nil {
 		log.Println("Error setting provider")
 		log.Println(err)
+		errW := webhooks.ErrorAction("failed", "Error setting provider", err.Error())
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 

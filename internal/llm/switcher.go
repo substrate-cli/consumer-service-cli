@@ -22,6 +22,12 @@ func NewLLMClient(provider string) (interfaces.LLMClient, error) {
 			apiKey = *cliApiKey
 		}
 		return &OpenAIClient{APIKey: apiKey}, nil
+	case "gemini":
+		apiKey := utils.GetGeminiApiKey()
+		if cliApiKey != nil {
+			apiKey = *cliApiKey
+		}
+		return &GeminiClient{APIKey: apiKey}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", provider)
 	}

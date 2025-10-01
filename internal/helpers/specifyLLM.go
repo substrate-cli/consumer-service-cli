@@ -13,6 +13,7 @@ func SpecifyModel(modelName string) error {
 	supportedModels := []string{
 		"anthropic",
 		"openai",
+		"gemini",
 	}
 
 	modelName = strings.ToLower(modelName)
