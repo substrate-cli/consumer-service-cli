@@ -9,13 +9,7 @@ import (
 )
 
 func SpecifyModel(modelName string) error {
-
-	supportedModels := []string{
-		"anthropic",
-		"openai",
-		"gemini",
-	}
-
+	supportedModels := strings.Split(utils.GetSupportedModels(), ",")
 	modelName = strings.ToLower(modelName)
 	defaultModel := utils.GetDefaultModel()
 

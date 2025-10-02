@@ -22,6 +22,7 @@ import (
 
 type AnthropicClient struct {
 	APIKey string
+	Spec   anthropic.Model
 }
 
 func (anthropicClient *AnthropicClient) CallPrecheck(prompt string) (string, error) {
@@ -41,7 +42,7 @@ func (anthropicClient *AnthropicClient) CallPrecheck(prompt string) (string, err
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
@@ -73,7 +74,7 @@ func (anthropicClient *AnthropicClient) CallGithubTreeScan(prompt string) (strin
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
@@ -105,7 +106,7 @@ func (anthropicClient *AnthropicClient) CallConstructBackendPrompt(prompt string
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
@@ -280,7 +281,7 @@ func (anthropicClient *AnthropicClient) CallPrePromptForGithubClone(description 
 			anthropic.NewUserMessage(anthropic.NewTextBlock(description)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")

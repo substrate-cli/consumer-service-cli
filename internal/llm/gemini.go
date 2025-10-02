@@ -15,6 +15,7 @@ import (
 
 type GeminiClient struct {
 	APIKey string
+	Spec   string
 }
 
 func (geminiClient *GeminiClient) CallPrecheck(prompt string) (string, error) {
@@ -33,7 +34,7 @@ func (geminiClient *GeminiClient) CallPrecheck(prompt string) (string, error) {
 	defer client.Close()
 
 	// Get the model - use gemini-2.0-flash-exp or gemini-1.5-pro
-	model := client.GenerativeModel("gemini-2.0-flash-exp")
+	model := client.GenerativeModel(geminiClient.Spec)
 
 	// Set max tokens (Gemini calls this MaxOutputTokens)
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
@@ -91,7 +92,7 @@ func (geminiClient *GeminiClient) CallConstructBackendPrompt(prompt string) (str
 	defer client.Close()
 
 	// Get the model
-	model := client.GenerativeModel("gemini-2.0-flash-exp")
+	model := client.GenerativeModel(geminiClient.Spec)
 
 	// Set system instruction
 	systemPrompt := utils.GetSystemPromptForBackendPromptConstruct()
@@ -142,7 +143,7 @@ func (geminiClient *GeminiClient) CallGithubTreeScan(prompt string) (string, err
 	defer client.Close()
 
 	// Get the model
-	model := client.GenerativeModel("gemini-2.0-flash-exp")
+	model := client.GenerativeModel(geminiClient.Spec)
 
 	// Set system instruction
 	systemPrompt := utils.GetSystemPromptForGithubTreeScan()
@@ -201,7 +202,7 @@ func (geminiClient *GeminiClient) VisionAnalysis(screenshot string, url string, 
 	defer client.Close()
 
 	// Get the vision model - Gemini models have native multimodal support
-	model := client.GenerativeModel("gemini-2.0-flash-exp")
+	model := client.GenerativeModel(geminiClient.Spec)
 
 	// Set max tokens
 	maxTokens := int32(16000)
@@ -260,6 +261,59 @@ func (geminiClient *GeminiClient) VisionAnalysis(screenshot string, url string, 
 }
 
 func (geminiClient *GeminiClient) CallPrePromptForGithubClone(description string) (string, error) {
-	log.Println("Inside OpenAI Engine, Assigning Prompt => ", description)
-	return "", nil
+	log.Println("Inside Gemini Engine, Assigning Prompt => ", description)
+	log.Println("Calling Gemini pre-prompt for github, prompt => ", description)
+
+	ctx := context.Background()
+
+	// Create client
+	client, err := genai.NewClient(ctx, option.WithAPIKey(geminiClient.APIKey))
+	if err != nil {
+		log.Println("error creating gemini client")
+		log.Println(err)
+		return "", err
+	}
+	defer client.Close()
+
+	// Get the model
+	model := client.GenerativeModel(geminiClient.Spec)
+
+	// Set system instruction
+	systemPrompt := utils.GetSystemPromptForPrePromptGithub()
+	model.SystemInstruction = &genai.Content{
+		Parts: []genai.Part{genai.Text(systemPrompt)},
+	}
+
+	// Optional: Set max tokens if needed
+	maxTokens := utils.GetOpenAIMaxTokensPrecheck()
+	maxTokensInt32 := int32(maxTokens)
+	model.MaxOutputTokens = &maxTokensInt32
+
+	// Generate content
+	resp, err := model.GenerateContent(ctx, genai.Text(description))
+	if err != nil {
+		log.Println("error calling gemini api")
+		log.Println(err)
+		return "", err
+	}
+
+	// Log token usage
+	if resp.UsageMetadata != nil {
+		log.Println("Output tokens: ", resp.UsageMetadata.CandidatesTokenCount)
+		log.Println("Input tokens: ", resp.UsageMetadata.PromptTokenCount)
+		log.Println("Total tokens: ", resp.UsageMetadata.TotalTokenCount)
+	}
+
+	// Extract text from response
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("no response from gemini")
+	}
+
+	raw := fmt.Sprintf("%v", resp.Candidates[0].Content.Parts[0])
+
+	// Clean up JSON formatting if present
+	cleaned := strings.TrimPrefix(raw, "```json\n")
+	cleaned = strings.TrimSuffix(cleaned, "\n```")
+
+	return cleaned, nil
 }

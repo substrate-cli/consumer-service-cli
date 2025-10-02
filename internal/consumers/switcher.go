@@ -41,6 +41,7 @@ func HandleSpinConsumer(body []byte) error {
 		payload.ClusterName = helpers.GenerateProjectName()
 	}
 
+	payload.Model = strings.ToLower(payload.Model)
 	payload.Model = strings.TrimSpace(payload.Model)
 	err = helpers.SpecifyModel(payload.Model)
 	if err != nil {
@@ -178,7 +179,6 @@ func HandleSpinConsumer(body []byte) error {
 			repoName := response.Repo_name
 
 			visionResponse, err := headless.GenerateClonePromptByVision(repoUrl, client, true)
-			log.Println(visionResponse, "iiiiiiiii")
 			if err != nil {
 				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to generate clone")
 				if errW != nil {
@@ -273,8 +273,13 @@ func HandleSpinConsumer(body []byte) error {
 			finalResp := ""
 			if len(arr) > 0 {
 				finalResp, err = client.CallGithubTreeScan(string(jsonBytes))
-				if err != nil {
 
+				if err != nil {
+					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
+					if errW != nil {
+						log.Println(errW.Error())
+						log.Println("api-service webhook failed")
+					}
 					return err
 				}
 			}
@@ -286,6 +291,7 @@ func HandleSpinConsumer(body []byte) error {
 
 			var treeScanResponse map[string]any
 			err = json.Unmarshal([]byte(finalResp), &treeScanResponse)
+			log.Println(treeScanResponse, "tttttttttt")
 			if err != nil {
 				log.Println(err)
 				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")

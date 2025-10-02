@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -26,6 +27,7 @@ type configuration struct {
 	safeOrigins                string
 	redisAddr                  string
 	bundle                     string
+	supportedModels            string
 }
 
 var config *configuration
@@ -53,6 +55,7 @@ func init() {
 		safeOrigins:                os.Getenv("SAFE_ORIGINS"),
 		redisAddr:                  os.Getenv("REDIS_ADDR"),
 		bundle:                     os.Getenv("BUNDLE"),
+		supportedModels:            os.Getenv("SUPPORTED_MODELS"),
 	}
 }
 
@@ -167,4 +170,9 @@ func GetDefaultModel() string {
 
 func GetAMQPUrl() string {
 	return config.amqpUrl
+}
+
+func GetSupportedModels() string {
+	models := strings.ReplaceAll(config.supportedModels, " ", "")
+	return models
 }

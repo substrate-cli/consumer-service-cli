@@ -9,6 +9,7 @@ import (
 
 	"github.com/openai/openai-go/v2"
 	option "github.com/openai/openai-go/v2/option"
+	"github.com/openai/openai-go/v2/shared"
 	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 
 	vision "github.com/sashabaranov/go-openai"
@@ -16,6 +17,7 @@ import (
 
 type OpenAIClient struct {
 	APIKey string
+	Spec   shared.ChatModel
 }
 
 func (openAIClient *OpenAIClient) CallPrecheck(prompt string) (string, error) {
@@ -28,7 +30,7 @@ func (openAIClient *OpenAIClient) CallPrecheck(prompt string) (string, error) {
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
 		// MaxTokens: openai.Int(int64(maxTokens)),
-		Model: openai.ChatModelGPT5,
+		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
 			openai.SystemMessage(utils.GetSystemPromptForPrecheck()),
@@ -57,7 +59,7 @@ func (openAIClient *OpenAIClient) CallGithubTreeScan(prompt string) (string, err
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
 		// MaxTokens: openai.Int(int64(maxTokens)),
-		Model: openai.ChatModelGPT5,
+		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
 			openai.SystemMessage(utils.GetSystemPromptForGithubTreeScan()),
@@ -86,7 +88,7 @@ func (openAIClient *OpenAIClient) CallConstructBackendPrompt(prompt string) (str
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
 		// MaxTokens: openai.Int(int64(maxTokens)),
-		Model: openai.ChatModelGPT5,
+		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
 			openai.SystemMessage(utils.GetSystemPromptForBackendPromptConstruct()),
@@ -173,7 +175,7 @@ func (openAIClient *OpenAIClient) CallPrePromptForGithubClone(description string
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
 		// MaxTokens: openai.Int(int64(maxTokens)),
-		Model: openai.ChatModelGPT5,
+		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(description),
 			openai.SystemMessage(utils.GetSystemPromptForPrePromptGithub()),
