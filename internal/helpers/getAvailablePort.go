@@ -10,7 +10,7 @@ import (
 )
 
 func GetAvailablePort(startPort, endPort int) (int, error) {
-	if utils.GetBundle() == "dockerrerr" {
+	if utils.GetBundle() == "docker" {
 		// find free port on host
 		ln, _ := net.Listen("tcp", ":0")
 		hostPort := ln.Addr().(*net.TCPAddr).Port
@@ -35,7 +35,7 @@ func GetAvailablePort(startPort, endPort int) (int, error) {
 
 		// container ID returned by docker
 		containerID := string(output)
-		fmt.Printf("Container startedddddddddddd333333333333333: %s\n", containerID)
+		fmt.Printf("Container started: %s\n", containerID)
 		fmt.Printf("App is running on http://localhost:%d\n", hostPort)
 
 		return hostPort, nil
@@ -44,7 +44,7 @@ func GetAvailablePort(startPort, endPort int) (int, error) {
 		addr := fmt.Sprintf(":%d", port)
 		ln, err := net.Listen("tcp", addr)
 		if err == nil {
-			ln.Close() // Port is available, close it immediately
+			ln.Close()
 			return port, nil
 		}
 	}

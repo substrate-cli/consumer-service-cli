@@ -57,7 +57,6 @@ type ResponseMessage struct {
 }
 
 func GenerateClonePromptByVision(targetURL string, llmClient interfaces.LLMClient, isRepo bool) (map[string]any, error) {
-	// 1. Extract website data
 	data, err := extractWebsiteData(targetURL)
 
 	if err != nil {
@@ -65,7 +64,7 @@ func GenerateClonePromptByVision(targetURL string, llmClient interfaces.LLMClien
 		log.Println("Error while parsing screenshot")
 		return nil, errors.New("unable to clone website")
 	}
-	// 2. Get GPT Vision analysis
+
 	if data.Screenshot == "" {
 		log.Println("Screenshot is nil")
 		return nil, errors.New("unable to clone website")
@@ -80,8 +79,7 @@ func GenerateClonePromptByVision(targetURL string, llmClient interfaces.LLMClien
 		log.Println("error unmarshalling json")
 		return nil, errors.New("Unable to clone website")
 	}
-	// 3. Generate final prompt
-	// prompt := generateFinalPrompt(data, analysis)
+
 	return resp, nil
 }
 
@@ -120,8 +118,6 @@ func extractWebsiteData(targetURL string) (*WebsiteData, error) {
 
 	return data, nil
 }
-
-// Get GPT Vision analysis
 
 func fixImageURLWithRod(imageURL string) (string, error) {
 	if strings.Contains(strings.ToLower(imageURL), "svg") {

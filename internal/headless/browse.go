@@ -305,7 +305,6 @@ func (wc *WebsiteCloner) extractImages(page playwright.Page, baseURL string) ([]
 
 	limit := 100
 	// Also check for background images in CSS
-	// This would require parsing CSS, which is more complex
 	if len(assets) > limit {
 		assets = assets[:limit]
 	}

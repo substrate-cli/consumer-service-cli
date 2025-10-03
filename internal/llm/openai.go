@@ -24,12 +24,10 @@ func (openAIClient *OpenAIClient) CallPrecheck(prompt string) (string, error) {
 	log.Println("Inside OpenAI Engine, Assigning Prompt => ", prompt)
 	log.Println("Calling OpenAI precheck, prompt => ", prompt)
 	apiKey := openAIClient.APIKey
-	// maxTokens := utils.GetOpenAIMaxTokens()
 	client := openai.NewClient(
 		option.WithAPIKey(apiKey),
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-		// MaxTokens: openai.Int(int64(maxTokens)),
 		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
@@ -58,7 +56,6 @@ func (openAIClient *OpenAIClient) CallGithubTreeScan(prompt string) (string, err
 		option.WithAPIKey(apiKey),
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-		// MaxTokens: openai.Int(int64(maxTokens)),
 		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
@@ -169,12 +166,10 @@ func (openAIClient *OpenAIClient) CallPrePromptForGithubClone(description string
 	log.Println("Inside OpenAI Engine, Assigning Prompt => ", description)
 	log.Println("Calling OpenAI precheck, prompt => ", description)
 	apiKey := openAIClient.APIKey
-	// maxTokens := utils.GetOpenAIMaxTokens()
 	client := openai.NewClient(
 		option.WithAPIKey(apiKey),
 	)
 	message, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-		// MaxTokens: openai.Int(int64(maxTokens)),
 		Model: openAIClient.Spec,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(description),

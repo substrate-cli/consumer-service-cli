@@ -24,7 +24,6 @@ func SpecifyModel(modelName string) error {
 		utils.SetModel(modelName)
 	} else {
 		log.Println("invalid model reference")
-		// utils.SetModel(defaultModel)
 		return errors.New("invalid model provided.")
 	}
 	return nil

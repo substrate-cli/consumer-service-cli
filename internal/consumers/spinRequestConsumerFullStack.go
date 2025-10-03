@@ -332,16 +332,6 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 
 	log.Println("cluster running...")
 
-	// ---- calling api-service api to open websocket ------
-	// sendPorts := map[string]interface{}{
-	// 	"appPort":     appPort,
-	// 	"backendPort": backendPort,
-	// }
-	// err = helpers.CodeGenerationAction("finished", sendPorts)
-	// if err != nil {
-	// 	log.Println("Error calling code generation webhook")
-	// 	return err
-	// }
 	return nil
 }
 

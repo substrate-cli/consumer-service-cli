@@ -291,7 +291,6 @@ func HandleSpinConsumer(body []byte) error {
 
 			var treeScanResponse map[string]any
 			err = json.Unmarshal([]byte(finalResp), &treeScanResponse)
-			log.Println(treeScanResponse, "tttttttttt")
 			if err != nil {
 				log.Println(err)
 				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
@@ -481,7 +480,11 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 			fmt.Printf("Error creating cloner: %v\n", err)
 
 			//calling error webhook --
-
+			const msg = "Cluster creation failed"
+			errW = webhooks.ErrorAction("finished", msg, err.Error())
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 			//
 			return err
 		}
@@ -495,7 +498,11 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 		if err != nil {
 			log.Println("there was an error extracting images")
 			//error webhook no images ---
-
+			const msg = "Cluster creation failed"
+			errW = webhooks.ErrorAction("finished", msg, err.Error())
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 			//
 		}
 		assets = append(assets, extraction.Images...)
@@ -507,7 +514,11 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 		jsonBytes, err := json.Marshal(layoutResponse)
 		if err != nil {
 			//error webhook
-
+			const msg = "Cluster creation failed"
+			errW = webhooks.ErrorAction("finished", msg, err.Error())
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 			//
 			return err
 		}

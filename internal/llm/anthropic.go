@@ -270,7 +270,7 @@ func (anthropicClient *AnthropicClient) CallPrePromptForGithubClone(description 
 	apiKey := anthropicClient.APIKey
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
-		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
+		option.WithAPIKey(apiKey), // defaults to os.env("ANTHROPIC_API_KEY")
 	)
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),

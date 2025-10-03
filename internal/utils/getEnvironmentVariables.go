@@ -12,7 +12,6 @@ import (
 type configuration struct {
 	anthropicKey               string
 	anthropicURL               string
-	anthropicModel             string
 	anthropicMaxTokens         string
 	anthropicMaxTokensPrecheck string
 	apiServerUrl               string
@@ -40,7 +39,6 @@ func init() {
 	config = &configuration{
 		anthropicKey:               os.Getenv("ANTHROPIC_KEY"),
 		anthropicURL:               os.Getenv("ANTHROPIC_URL"),
-		anthropicModel:             os.Getenv("ANTHROPIC_MODEL"),
 		anthropicMaxTokens:         os.Getenv("ANTHROPIC_MAX_TOKENS"),
 		anthropicMaxTokensPrecheck: os.Getenv("ANTHROPIC_MAX_TOKENS_PRECHECK"),
 		openaiMaxTokens:            os.Getenv("OPENAI_MAX_TOKENS"),
@@ -65,10 +63,6 @@ func GetAnthropicKey() string {
 
 func GetAnthropicURL() string {
 	return config.anthropicURL
-}
-
-func GetAnthropicModel() string {
-	return config.anthropicModel
 }
 
 func GetBundle() string {

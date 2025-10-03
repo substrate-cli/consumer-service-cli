@@ -11,7 +11,6 @@ func CreateDirectories(baseDir string, fileMap map[string]string) error {
 		fullPath := filepath.Join(baseDir, relPath)
 		dir := filepath.Dir(fullPath)
 
-		// Create parent directories recursively
 		err := os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
 			log.Println(err)
