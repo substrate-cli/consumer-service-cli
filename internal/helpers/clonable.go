@@ -18,12 +18,12 @@ func IsClonableWebApp(url string) (bool, string) {
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	body := string(bodyBytes)
 
-	// Rule 1: Check if it's HTML
+	// Check if it's HTML
 	if strings.Contains(contentType, "text/html") && strings.Contains(strings.ToLower(body), "<html") {
 		return true, ""
 	}
 
-	// Rule 2: If response looks like JSON, plain text, etc.
+	// If response looks like JSON, plain text, etc.
 	if strings.Contains(contentType, "application/json") || !strings.Contains(body, "<html") {
 		return false, "The provided URL looks like a backend API (likely Node.js/Express) and not a frontend web app."
 	}

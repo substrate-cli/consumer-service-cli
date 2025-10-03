@@ -1,9 +1,5 @@
-# syntax=docker/dockerfile:1
-
-# Build stage
-FROM golang:1.24.4-alpine AS builder
-
-RUN apk add --no-cache git
+# consumer-service-cli/Dockerfile
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -12,26 +8,18 @@ RUN go mod download
 
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o consumer-app ./cmd/app
+RUN go build -o consumer-service-cli ./cmd/app
 
-# Runtime stage
 FROM alpine:latest
+WORKDIR /app
 
-RUN apk --no-cache add ca-certificates
+# Install curl + docker-cli + nodejs + npm
+RUN apk add --no-cache curl docker-cli nodejs npm docker-compose
 
-WORKDIR /root/
+# Check versions
+RUN node --version && npm --version && npx --version && docker --version
 
-# Copy with absolute paths
-COPY --from=builder /app/consumer-app /root/consumer-app
+# Copy the built binary
+COPY --from=builder /app/consumer-service-cli .
 
-# Set permissions
-RUN chmod +x /root/consumer-app
-
-# Copy .env file
-COPY .env /root/.env
-
-EXPOSE 8090
-
-# Use absolute path in CMD
-CMD ["/root/consumer-app"]
+CMD ["./consumer-service-cli"]

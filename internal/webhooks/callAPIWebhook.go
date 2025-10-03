@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func CodeGenerationAction(status string, payload map[string]interface{}) error {

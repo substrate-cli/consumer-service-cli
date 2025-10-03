@@ -7,7 +7,7 @@ import (
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	option "github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func CallPrecheck(prompt string) (string, error) {
@@ -56,7 +56,7 @@ func CallConstructBackendPrompt(prompt string) (string, error) {
 	}
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
-		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
+		option.WithAPIKey(apiKey), // defaults to os.env("ANTHROPIC_API_KEY")
 	)
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),

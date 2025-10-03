@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -11,11 +12,11 @@ import (
 type configuration struct {
 	anthropicKey               string
 	anthropicURL               string
-	anthropicModel             string
 	anthropicMaxTokens         string
 	anthropicMaxTokensPrecheck string
 	apiServerUrl               string
 	openAIKey                  string
+	geminiKey                  string
 	port                       string
 	mode                       string
 	defaultModel               string
@@ -24,6 +25,8 @@ type configuration struct {
 	amqpUrl                    string
 	safeOrigins                string
 	redisAddr                  string
+	bundle                     string
+	supportedModels            string
 }
 
 var config *configuration
@@ -36,19 +39,21 @@ func init() {
 	config = &configuration{
 		anthropicKey:               os.Getenv("ANTHROPIC_KEY"),
 		anthropicURL:               os.Getenv("ANTHROPIC_URL"),
-		anthropicModel:             os.Getenv("ANTHROPIC_MODEL"),
 		anthropicMaxTokens:         os.Getenv("ANTHROPIC_MAX_TOKENS"),
 		anthropicMaxTokensPrecheck: os.Getenv("ANTHROPIC_MAX_TOKENS_PRECHECK"),
 		openaiMaxTokens:            os.Getenv("OPENAI_MAX_TOKENS"),
 		openaiMaxTokensPrecheck:    os.Getenv("OPENAI_MAX_TOKENS_PRECHECK"),
 		apiServerUrl:               os.Getenv("API_SERVER_URL"),
 		openAIKey:                  os.Getenv("OPENAI_KEY"),
+		geminiKey:                  os.Getenv("GEMINI_API_KEY"),
 		port:                       os.Getenv("PORT"),
 		mode:                       os.Getenv("MODE"),
 		defaultModel:               os.Getenv("DEFAULT_MODEL"),
 		amqpUrl:                    os.Getenv("AMQP_URL"),
 		safeOrigins:                os.Getenv("SAFE_ORIGINS"),
 		redisAddr:                  os.Getenv("REDIS_ADDR"),
+		bundle:                     os.Getenv("BUNDLE"),
+		supportedModels:            os.Getenv("SUPPORTED_MODELS"),
 	}
 }
 
@@ -60,8 +65,8 @@ func GetAnthropicURL() string {
 	return config.anthropicURL
 }
 
-func GetAnthropicModel() string {
-	return config.anthropicModel
+func GetBundle() string {
+	return config.bundle
 }
 
 func GetSafeOrigins() string {
@@ -125,6 +130,10 @@ func GetOpenAIKey() string {
 	return config.openAIKey
 }
 
+func GetGeminiApiKey() string {
+	return config.geminiKey
+}
+
 func GetOpenAIMaxTokens() int {
 	maxTokens, err := strconv.Atoi(config.anthropicMaxTokens)
 	if err != nil {
@@ -155,4 +164,9 @@ func GetDefaultModel() string {
 
 func GetAMQPUrl() string {
 	return config.amqpUrl
+}
+
+func GetSupportedModels() string {
+	models := strings.ReplaceAll(config.supportedModels, " ", "")
+	return models
 }

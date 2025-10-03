@@ -2,8 +2,10 @@ package consumers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,11 +14,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sshfz/consumer-service-substrate/internal/db"
-	"github.com/sshfz/consumer-service-substrate/internal/helpers"
-	"github.com/sshfz/consumer-service-substrate/internal/producers"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
-	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
+	"github.com/substrate-cli/consumer-service-cli/internal/db"
+	"github.com/substrate-cli/consumer-service-cli/internal/helpers"
+	"github.com/substrate-cli/consumer-service-cli/internal/producers"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/webhooks"
 )
 
 type SpinRequest struct {
@@ -35,8 +37,11 @@ var appPort int
 
 func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	clusterName := spinRequest.ClusterName
-	homeDir, err := os.UserHomeDir()
-	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
+	rootProjectPath, err := utils.GetHomeDirectory()
+	if err != nil {
+		return err
+	}
+	rootProjectPath = filepath.Join(rootProjectPath, "substrate-home", clusterName)
 	// os.MkdirAll(filepath.Join(rootProjectPath, "app"), os.ModePerm)
 
 	exists, err := utils.DirExists(rootProjectPath)
@@ -54,7 +59,12 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	} else {
 		os.MkdirAll(filepath.Join(rootProjectPath, "server"), os.ModePerm)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			errW := webhooks.ErrorAction("finished", "failed to create cluster", err.Error())
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
+			return err
 		}
 
 		log.Println("Directory does not exist")
@@ -66,7 +76,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 
 		bPort, err := helpers.GetAvailablePort(3000, 3100)
 		if err != nil {
-			log.Fatalln("no free port available")
+			log.Println("no free port available")
+			errW := webhooks.ErrorAction("finished", "No free port available", "No free port available")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
 			return err
 		}
 		log.Println("backendPort =>", bPort)
@@ -191,11 +205,12 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 
 		if hasError {
-			log.Fatal("One or more tasks failed")
+			log.Println("One or more tasks failed")
 			errW := webhooks.ErrorAction("finished", "error creating cluster", "One or more tasks failed")
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
+			return errors.New("One or more tasks failed on LLM call")
 		} else {
 			log.Println("✅ Both projects created successfully")
 		}
@@ -210,7 +225,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	}
 
 	if err != nil {
-		log.Fatal("Failed to spin project:", err)
+		log.Println("Failed to spin project:", err)
 		errW := webhooks.ErrorAction("finished", "error creating cluster", "failed to spin cluster")
 		if errW != nil {
 			log.Println("api-service webhook failed")
@@ -267,13 +282,13 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	go func() {
 		result := appCode
 		path := filepath.Join(rootProjectPath, "app")
-		errChan <- generateCode(path, result["app"].(map[string]any))
+		errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext(), spinRequest.ClusterName)
 	}()
 
 	go func() {
 		result := serverCode
 		path := filepath.Join(rootProjectPath, "server")
-		errChan <- generateCode(path, result["server"].(map[string]any))
+		errChan <- generateCode(path, result["server"].(map[string]any), *utils.GetDockerNode(), spinRequest.ClusterName)
 	}()
 
 	var hasError bool
@@ -284,11 +299,12 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		}
 	}
 	if hasError {
-		log.Fatal("One or more tasks failed")
+		log.Println("One or more tasks failed")
 		errW := webhooks.ErrorAction("finished", "error creating cluster", "one or more tasks failed")
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
+		return err
 	} else {
 		log.Println("✅ Cluster running successfully.")
 		errW := webhooks.PrecheckAction("finished", "Cluster initialised succesfully.")
@@ -300,7 +316,7 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	/// building and running the project on different ports.-----
 
 	log.Print("Initiating build and starting projects...")
-	err = runProject(rootProjectPath, true)
+	err = runProject(rootProjectPath, true, spinRequest.ClusterName, true)
 	if err != nil {
 		return err
 	}
@@ -314,25 +330,18 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		log.Println("Error calling code generation webhook")
 	}
 
-	// ---- calling api-service api to open websocket ------
-	// sendPorts := map[string]interface{}{
-	// 	"appPort":     appPort,
-	// 	"backendPort": backendPort,
-	// }
-	// err = helpers.CodeGenerationAction("finished", sendPorts)
-	// if err != nil {
-	// 	log.Println("Error calling code generation webhook")
-	// 	return err
-	// }
+	log.Println("cluster running...")
+
 	return nil
 }
 
 func createNextApp(projectPath string) error {
 	// basePath := filepath.Join(projectPath)
-
 	// 🔹 Create Next.js app using npx (must be installed globally)
 	cmd := exec.Command(
-		"npx", "create-next-app@latest",
+		"npx",
+		"--yes",
+		"create-next-app@latest",
 		"app",
 		"--ts",
 		"--eslint",
@@ -347,6 +356,7 @@ func createNextApp(projectPath string) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		log.Println(err)
 		return err
 	}
 	projectPath = filepath.Join(projectPath, "app")
@@ -438,10 +448,9 @@ func createNodeJSProject(projectPath string) error {
 	return nil
 }
 
-func generateCode(appPath string, data map[string]interface{}) error {
+func generateCode(appPath string, data map[string]interface{}, structure string, cluster string) error {
 	rawMap, ok := data["fileStructure"].(map[string]interface{})
 	rawLibraries, ok2 := data["libraries"].([]interface{})
-	log.Print("kkkkkkkk", rawLibraries)
 	var libraries []string
 	if !ok2 {
 		log.Println("libraries key not found or not an array")
@@ -456,10 +465,30 @@ func generateCode(appPath string, data map[string]interface{}) error {
 	}
 
 	if !ok {
-		log.Fatal("fileStructure is not a map[string]interface{}")
+		log.Println("fileStructure is not a map[string]interface{}")
+		errW := webhooks.ErrorAction("finished", "error creating cluster", "invalid file structure")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		return errors.New("invalid file structure")
 	}
 
 	fileMap := make(map[string]string)
+
+	if utils.GetBundle() == "docker" {
+		log.Println("docker environment detected...")
+		log.Println("generating docker file for => ", structure)
+		stm := fmt.Sprintf("Generating dockerfile for %s", structure)
+		errW := webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
+		dockerfile := helpers.GetDockerFile(structure)
+		rawMap["dockerfile"] = map[string]interface{}{
+			"code": dockerfile,
+		} //only for next js for now -----
+	}
 
 	for path, content := range rawMap {
 
@@ -467,7 +496,8 @@ func generateCode(appPath string, data map[string]interface{}) error {
 			if content, exists := m["code"]; exists {
 				strContent, ok := content.(string)
 				if !ok {
-					log.Fatalf("content for path %s is not a string", path)
+					smt := fmt.Sprintf("content for path %s is not a string", path)
+					log.Println(smt)
 				}
 				fileMap[path] = strContent
 			}
@@ -511,11 +541,13 @@ func generateCode(appPath string, data map[string]interface{}) error {
 
 			jsonData, err := json.Marshal(fileContentMapRedis)
 			if err != nil {
-				log.Fatal("Error marshaling map:", err)
+				log.Println("Error marshaling map:", err)
+				return err
 			}
 
 			//saving to redis ----
-			db.SaveRedis("sleepyhead_slyme:structure", string(jsonData))
+			stm := fmt.Sprintf("%s:structure", cluster)
+			db.SaveRedis(stm, string(jsonData))
 		} else {
 			fmt.Printf("Path %s is not a map, got %T\n", path, content)
 		}
@@ -546,27 +578,30 @@ func installLibraries(rootPath string, libraries []string) error {
 	return nil
 }
 
-func runProject(rootPath string, isbackend bool) error {
+func runProject(rootPath string, isbackend bool, cluster string, isFS bool) error {
 	type error interface {
 		Error() string
 	}
 	var err error
 	if isbackend {
-		err = runServer(rootPath)
+
+		err = runServer(rootPath, cluster, isFS)
 		if err != nil {
-			log.Fatal("Failed to start server")
+			log.Println("Failed to start server")
+			log.Println(err)
 			return err
 		}
 	}
-	err = runApp(rootPath)
+	err = runApp(rootPath, cluster, isFS)
 	if err != nil {
-		log.Fatal("Failed to start app")
+		log.Println("Failed to start app")
+		log.Println(err)
 		return err
 	}
 	return nil
 }
 
-func runServer(rootPath string) error {
+func runServer(rootPath string, cluster string, isFS bool) error {
 	path := filepath.Join(rootPath, "server")
 	cmd := exec.Command("npm", "run", "dev")
 	// port, err := helpers.GetAvailablePort(3000, 3100)
@@ -574,6 +609,11 @@ func runServer(rootPath string) error {
 	// 	log.Println("Terminating execution, no free port available.")
 	// 	return err
 	// }
+	if utils.GetBundle() == "docker" && isFS {
+		log.Println("docker environment detected for server...")
+		return nil
+	}
+
 	cmd.Dir = path // same as cwd
 	log.Println("server will start on PORT =>", backendPort)
 	cmd.Env = append(os.Environ(), "PORT="+strconv.Itoa(backendPort))
@@ -590,7 +630,7 @@ func runServer(rootPath string) error {
 	return nil
 }
 
-func runApp(rootPath string) error {
+func runApp(rootPath string, cluster string, isFS bool) error {
 	path := filepath.Join(rootPath, "app")
 	cmd := exec.Command("npm", "run", "dev")
 	log.Println("starting next js server...")
@@ -598,6 +638,174 @@ func runApp(rootPath string) error {
 	// 	log.Println("Terminating execution, no free port available.")
 	// 	return err
 	// }
+	if utils.GetBundle() == "docker" && !isFS {
+		log.Println("docker environment detected for cluster...")
+		imageName := fmt.Sprintf("%s:latest", cluster)
+		containerName := cluster
+		buildCmd := exec.Command("docker", "build", "-t", imageName, path)
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Stderr = os.Stderr
+
+		stm := "building docker image for app... DO NOT QUIT"
+		errW := webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("running docker build...")
+		if err := buildCmd.Run(); err != nil {
+			fmt.Println("❌ Error building image:", err)
+			return err
+		}
+
+		stm = "docker image build successful... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
+		//gettign post from host machine -----
+		stm = "searching for free port on host machine... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("finding free port on host machine...")
+		ln, _ := net.Listen("tcp", ":0")
+		hostPort := ln.Addr().(*net.TCPAddr).Port
+		appPort = hostPort
+		ln.Close()
+
+		stm = "Warming container in docker daemon... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("starting container...")
+		runCmd := exec.Command("docker", "run",
+			"-d", "--rm",
+			"--name", containerName,
+			"-p", fmt.Sprintf("%d:3000", hostPort),
+			imageName,
+		)
+
+		// run docker container
+		output, err := runCmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error:", err)
+			fmt.Println("Output:", string(output))
+			return err
+		}
+
+		log.Println("container running...")
+
+		stm = "cluster running in container... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		// container ID returned by docker
+		containerID := string(output)
+		fmt.Printf("Container started: %s\n", containerID)
+		fmt.Printf("App is running on http://localhost:%d\n", hostPort)
+
+		stm = "cluster running on " + strconv.Itoa(hostPort)
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		fmt.Println("✅ Generated app container started")
+		path = filepath.Join(path, "node_modules")
+		utils.DeleteFile(path)
+		return nil
+	}
+
+	if utils.GetBundle() == "docker" && isFS {
+		//running docker-compose ----
+		log.Println("docker environment detected for cluster...")
+		stm := "finding free ports on host machine... DO NOT QUIT"
+		errW := webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("searching for free ports on host machine...")
+		ln1, _ := net.Listen("tcp", ":0")
+		backendPort = ln1.Addr().(*net.TCPAddr).Port
+
+		ln2, _ := net.Listen("tcp", ":0")
+		appPort = ln2.Addr().(*net.TCPAddr).Port
+
+		ln1.Close()
+		ln2.Close()
+
+		stm = "Writing Docker Compose to warm up cluster... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("writing docker compose...")
+		compose := helpers.GetDockerCompose(backendPort, appPort, cluster)
+		composePath := filepath.Join(rootPath, "docker-compose.yml")
+		_ = utils.WriteFiles(composePath, compose)
+
+		stm = "Docker compose acknowledged, building images... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("docker compose written successfully...")
+		log.Println("building docker images...")
+		buildCmd := exec.Command("docker", "compose", "build")
+		buildCmd.Dir = rootPath
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Stderr = os.Stderr
+		if err := buildCmd.Run(); err != nil {
+			log.Println("❌ Error building image:", err)
+			return err
+		}
+
+		log.Println("images built successfully...")
+		stm = "build successful, warming up containers... DO NOT QUIT"
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		log.Println("proceeding to run containers in isolated environment...")
+
+		runCmd := exec.Command("docker-compose", "up", "-d")
+		runCmd.Dir = rootPath
+		output, err := runCmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error:", err)
+			fmt.Println("Output:", string(output))
+			return err
+		}
+
+		log.Println("container running...", appPort, backendPort)
+		stm = "Containers running..."
+		errW = webhooks.PrecheckAction("finished", stm)
+		if errW != nil {
+			log.Println("api-service webhook failed", errW)
+		}
+
+		path = filepath.Join(rootPath, "server", "node_modules")
+		utils.DeleteFile(path)
+
+		path = filepath.Join(rootPath, "app", "node_modules")
+		utils.DeleteFile(path)
+
+		fmt.Printf("App is running on http://localhost:%d\n", appPort)
+
+		return nil
+	}
 	cmd.Dir = path // same as cwd
 	cmd.Env = append(os.Environ(), "PORT="+strconv.Itoa(appPort))
 	cmd.Stdout = os.Stdout

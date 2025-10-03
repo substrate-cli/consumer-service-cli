@@ -11,7 +11,6 @@ func CreateDirectories(baseDir string, fileMap map[string]string) error {
 		fullPath := filepath.Join(baseDir, relPath)
 		dir := filepath.Dir(fullPath)
 
-		// Create parent directories recursively
 		err := os.MkdirAll(dir, os.ModePerm)
 		if err != nil {
 			log.Println(err)
@@ -38,4 +37,15 @@ func DirExists(path string) (bool, error) {
 		return false, err // Some other error
 	}
 	return info.IsDir(), nil
+}
+
+func DeleteFile(filePath string) error {
+	err := os.RemoveAll(filePath)
+	if err != nil {
+		log.Println("Error deleting file:", err)
+		return err
+	}
+
+	log.Println("File deleted successfully")
+	return nil
 }

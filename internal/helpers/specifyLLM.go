@@ -5,16 +5,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func SpecifyModel(modelName string) error {
-
-	supportedModels := []string{
-		"anthropic",
-		"openai",
-	}
-
+	supportedModels := strings.Split(utils.GetSupportedModels(), ",")
 	modelName = strings.ToLower(modelName)
 	defaultModel := utils.GetDefaultModel()
 
@@ -29,7 +24,6 @@ func SpecifyModel(modelName string) error {
 		utils.SetModel(modelName)
 	} else {
 		log.Println("invalid model reference")
-		// utils.SetModel(defaultModel)
 		return errors.New("invalid model provided.")
 	}
 	return nil

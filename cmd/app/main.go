@@ -12,8 +12,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/sshfz/consumer-service-substrate/cmd/app/connections"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/cmd/app/connections"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 )
 
 func main() {

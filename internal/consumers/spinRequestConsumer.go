@@ -2,28 +2,33 @@ package consumers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 
-	"github.com/sshfz/consumer-service-substrate/internal/db"
-	"github.com/sshfz/consumer-service-substrate/internal/helpers"
-	"github.com/sshfz/consumer-service-substrate/internal/producers"
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
-	"github.com/sshfz/consumer-service-substrate/internal/webhooks"
+	"github.com/substrate-cli/consumer-service-cli/internal/db"
+	"github.com/substrate-cli/consumer-service-cli/internal/helpers"
+	"github.com/substrate-cli/consumer-service-cli/internal/producers"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/webhooks"
 )
 
 func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	clusterName := spinRequest.ClusterName
-	homeDir, err := os.UserHomeDir()
-	rootProjectPath := filepath.Join(homeDir, "Desktop", "substrate-home", clusterName)
+	rootProjectPath, err := utils.GetHomeDirectory()
+	if err != nil {
+		return err
+	}
+	rootProjectPath = filepath.Join(rootProjectPath, "substrate-home", clusterName)
 
 	exists, err := utils.DirExists(rootProjectPath)
 	if err != nil {
 		log.Println("Error checking directory:", err)
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
+		return errors.New("Directory already exists pls choose a different for the project.")
 	} else {
 		if err != nil {
 			errW := webhooks.ErrorAction("finished", "failed to create cluster", "error checking directory")
@@ -49,7 +54,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 
 		aPort, err := helpers.GetAvailablePort(3000, 3100)
 		if err != nil {
-			log.Fatalln("no free port available")
+			log.Println("no free port available")
 			errW := webhooks.ErrorAction("finished", "cluster creation failed", "no free port available")
 			if errW != nil {
 				log.Println("api-service webhook failed")
@@ -120,6 +125,13 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		}()
 
 		wg.Wait()
+		if err != nil {
+			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed")
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
+			return err
+		}
 		errW = webhooks.PrecheckAction("finished", "Next App Initialised, Proceeding for code generation, DO NOT QUIT")
 		if errW != nil {
 			log.Println("api-service webhook failed")
@@ -130,7 +142,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 
 		go func() {
 			path := filepath.Join(rootProjectPath, "app")
-			errChan <- generateCode(path, result["app"].(map[string]any))
+			errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext(), spinRequest.ClusterName)
 		}()
 
 		var hasError bool
@@ -142,12 +154,12 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		}
 
 		if hasError {
-			log.Fatal("One or more tasks failed")
+			log.Println("One or more tasks failed")
 			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed")
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
-			return err
+			return errors.New("One or more tasks failed on LLM call")
 		} else {
 			log.Println("Next js project created successfully")
 			errW = webhooks.PrecheckAction("finished", "code written succesfully.")
@@ -164,7 +176,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	/// building and running the project on different ports.-----
 
 	log.Print("Initiating build and starting projects...")
-	err = runProject(rootProjectPath, false)
+	err = runProject(rootProjectPath, false, spinRequest.ClusterName, false)
 	if err != nil {
 		errW := webhooks.ErrorAction("finished", "cluster created, but failed to run.", "failed to run project")
 		if errW != nil {
@@ -184,32 +196,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		return err
 	}
 
-	log.Println("code generation webhook proccessed")
-
-	//running build -----
-	// RunBuildCommand2(rootProjectPath)
-	log.Println("Running build -------------------------------------")
-	// errorsMatch, err := RunBuildCommand(rootProjectPath)
-	// if err != nil {
-	// 	log.Println("Error found in build")
-	// 	return err
-	// }
-
-	// if len(errorsMatch) > 0 {
-	// 	data, err := helpers.CallAnthropicError(errorsMatch)
-
-	// 	if err != nil {
-	// 		log.Println("Error in build llm call")
-	// 		log.Println(err)
-	// 	}
-	// 	path := filepath.Join(rootProjectPath, "app")
-	// 	err = FixBuildCode(path, data["app"].(map[string]interface{}))
-	// 	if err != nil {
-	// 		log.Println("Error fixing build issues.")
-	// 		log.Println(err)
-	// 	}
-	// }
-	////build code ends ----------
+	log.Println("code generation webhook processed")
 
 	return nil
 }
@@ -217,7 +204,12 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 func FixBuildCode(appPath string, data map[string]interface{}) error {
 	rawMap, ok := data["fileStructure"].(map[string]interface{})
 	if !ok {
-		log.Fatal("fileStructure is not a map[string]interface{}")
+		log.Println("fileStructure is not a map[string]interface{}")
+		errW := webhooks.ErrorAction("finished", "error creating cluster", "invalid file structure")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		return errors.New("invalid file structure")
 	}
 
 	for filePath, content := range rawMap {

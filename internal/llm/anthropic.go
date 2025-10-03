@@ -14,16 +14,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sshfz/consumer-service-substrate/internal/utils"
+	"github.com/substrate-cli/consumer-service-cli/internal/utils"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	option "github.com/anthropics/anthropic-sdk-go/option"
-	// vision "github.com/sashabaranov/go-openai"
-	// claude "github.com/potproject/claude-sdk-go"
 )
 
 type AnthropicClient struct {
 	APIKey string
+	Spec   anthropic.Model
 }
 
 func (anthropicClient *AnthropicClient) CallPrecheck(prompt string) (string, error) {
@@ -43,7 +42,7 @@ func (anthropicClient *AnthropicClient) CallPrecheck(prompt string) (string, err
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
@@ -75,7 +74,7 @@ func (anthropicClient *AnthropicClient) CallGithubTreeScan(prompt string) (strin
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
@@ -107,7 +106,7 @@ func (anthropicClient *AnthropicClient) CallConstructBackendPrompt(prompt string
 			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
@@ -271,7 +270,7 @@ func (anthropicClient *AnthropicClient) CallPrePromptForGithubClone(description 
 	apiKey := anthropicClient.APIKey
 	maxTokens := utils.GetAnthropicMaxTokensPrecheck()
 	client := anthropic.NewClient(
-		option.WithAPIKey(apiKey), // defaults to os.LookupEnv("ANTHROPIC_API_KEY")
+		option.WithAPIKey(apiKey), // defaults to os.env("ANTHROPIC_API_KEY")
 	)
 	message, err := client.Messages.New(context.TODO(), anthropic.MessageNewParams{
 		MaxTokens: int64(maxTokens),
@@ -282,7 +281,7 @@ func (anthropicClient *AnthropicClient) CallPrePromptForGithubClone(description 
 			anthropic.NewUserMessage(anthropic.NewTextBlock(description)),
 		},
 
-		Model: anthropic.ModelClaude4Opus20250514,
+		Model: anthropicClient.Spec,
 	})
 	if err != nil {
 		log.Println("error calling anthropic api")
