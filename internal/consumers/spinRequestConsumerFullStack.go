@@ -56,6 +56,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		return err
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
+		errW := webhooks.ErrorAction("finished", "Directory already exists pls choose a different name for the project.", "cluster init failed")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		return errors.New("Directory already exists pls choose a different name for the project.")
 	} else {
 		os.MkdirAll(filepath.Join(rootProjectPath, "server"), os.ModePerm)
 		if err != nil {
@@ -157,6 +162,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if err != nil {
 				log.Println("Error generating node js code")
 				log.Println(err)
+				errW := webhooks.ErrorAction("finished", "error creating cluster", err.Error())
+				if errW != nil {
+					log.Println("api-service webhook failed")
+				}
 				errChan <- err
 			}
 			errW = webhooks.PrecheckAction("finished", "server code generated succesfully.")
@@ -187,6 +196,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if err != nil {
 				log.Println("Error generating app code")
 				log.Println(err)
+				errW := webhooks.ErrorAction("finished", "error creating cluster", err.Error())
+				if errW != nil {
+					log.Println("api-service webhook failed")
+				}
 				errChan <- err
 			}
 			errW = webhooks.PrecheckAction("finished", "app code generated succesfully.")
@@ -321,11 +334,21 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		return err
 	}
 
+	db.SaveRedis(clusterName, "running")
+
 	sendPorts := map[string]interface{}{
 		"appPort":    appPort,
 		"serverPort": backendPort,
 	}
 	errW = webhooks.CodeGenerationAction("finished", sendPorts)
+	if errW != nil {
+		log.Println("Error calling code generation webhook")
+	}
+
+	cluster := map[string]interface{}{
+		"clusterName": spinRequest.ClusterName,
+	}
+	errW = webhooks.CodeGenerationAction("finished", cluster)
 	if errW != nil {
 		log.Println("Error calling code generation webhook")
 	}
@@ -539,15 +562,15 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 				fileContentMapRedis[path] = code.(string)
 			}
 
-			jsonData, err := json.Marshal(fileContentMapRedis)
-			if err != nil {
-				log.Println("Error marshaling map:", err)
-				return err
-			}
+			// jsonData, err := json.Marshal(fileContentMapRedis)
+			// if err != nil {
+			// 	log.Println("Error marshaling map:", err)
+			// 	return err
+			// }
 
-			//saving to redis ----
-			stm := fmt.Sprintf("%s:structure", cluster)
-			db.SaveRedis(stm, string(jsonData))
+			// //saving to redis ----
+			// stm := fmt.Sprintf("%s:structure", cluster)
+			// db.SaveRedis(stm, string(jsonData))
 		} else {
 			fmt.Printf("Path %s is not a map, got %T\n", path, content)
 		}

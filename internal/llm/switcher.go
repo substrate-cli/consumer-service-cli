@@ -17,7 +17,7 @@ func NewLLMClient(provider string) (interfaces.LLMClient, error) {
 		if cliApiKey != nil {
 			apiKey = *cliApiKey
 		}
-		return &AnthropicClient{APIKey: apiKey, Spec: anthropic.ModelClaudeSonnet4_5_20250929}, nil
+		return &AnthropicClient{APIKey: apiKey, Spec: anthropic.ModelClaudeOpus4_1_20250805}, nil
 	case "openai":
 		apiKey := utils.GetOpenAIKey()
 		if cliApiKey != nil {

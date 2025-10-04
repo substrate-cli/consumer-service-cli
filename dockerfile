@@ -1,6 +1,8 @@
 # consumer-service-cli/Dockerfile
 FROM golang:1.24-alpine AS builder
 
+LABEL org.opencontainers.image.source https://github.com/substrate-cli/consumer-service-cli
+
 WORKDIR /app
 
 COPY go.mod go.sum ./

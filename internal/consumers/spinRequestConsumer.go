@@ -28,7 +28,11 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		log.Println("Error checking directory:", err)
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
-		return errors.New("Directory already exists pls choose a different for the project.")
+		errW := webhooks.ErrorAction("finished", "Directory already exists pls choose a different name for the project.", "cluster init failed")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		return errors.New("Directory already exists pls choose a different name for the project.")
 	} else {
 		if err != nil {
 			errW := webhooks.ErrorAction("finished", "failed to create cluster", "error checking directory")
@@ -193,7 +197,15 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	errW := webhooks.CodeGenerationAction("finished", sendPorts)
 	if errW != nil {
 		log.Println("Error calling code generation webhook")
-		return err
+	}
+
+	cluster := map[string]interface{}{
+		"clusterName": spinRequest.ClusterName,
+	}
+
+	errW = webhooks.CodeGenerationAction("finished", cluster)
+	if errW != nil {
+		log.Println("Error calling code generation webhook")
 	}
 
 	log.Println("code generation webhook processed")
