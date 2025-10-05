@@ -146,7 +146,10 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 
 		go func() {
 			path := filepath.Join(rootProjectPath, "app")
-			errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext(), spinRequest.ClusterName)
+			initCommands := [][]string{
+				{"npx", "shadcn@latest", "init", "-d"},
+			}
+			errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext(), spinRequest.ClusterName, initCommands)
 		}()
 
 		var hasError bool
