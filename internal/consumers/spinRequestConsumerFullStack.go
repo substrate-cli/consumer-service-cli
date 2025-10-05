@@ -56,6 +56,11 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		return err
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
+		errW := webhooks.ErrorAction("finished", "Directory already exists pls choose a different name for the project.", "cluster init failed")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+		return errors.New("Directory already exists pls choose a different name for the project.")
 	} else {
 		os.MkdirAll(filepath.Join(rootProjectPath, "server"), os.ModePerm)
 		if err != nil {
@@ -157,6 +162,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if err != nil {
 				log.Println("Error generating node js code")
 				log.Println(err)
+				errW := webhooks.ErrorAction("finished", "error creating cluster", err.Error())
+				if errW != nil {
+					log.Println("api-service webhook failed")
+				}
 				errChan <- err
 			}
 			errW = webhooks.PrecheckAction("finished", "server code generated succesfully.")
@@ -187,6 +196,10 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 			if err != nil {
 				log.Println("Error generating app code")
 				log.Println(err)
+				errW := webhooks.ErrorAction("finished", "error creating cluster", err.Error())
+				if errW != nil {
+					log.Println("api-service webhook failed")
+				}
 				errChan <- err
 			}
 			errW = webhooks.PrecheckAction("finished", "app code generated succesfully.")
@@ -282,13 +295,19 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 	go func() {
 		result := appCode
 		path := filepath.Join(rootProjectPath, "app")
-		errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext(), spinRequest.ClusterName)
+		initCommands := [][]string{
+			{"npx", "shadcn@latest", "init", "-d"},
+		}
+		errChan <- generateCode(path, result["app"].(map[string]any), *utils.GetDockerNext(), spinRequest.ClusterName, initCommands)
 	}()
 
 	go func() {
 		result := serverCode
 		path := filepath.Join(rootProjectPath, "server")
-		errChan <- generateCode(path, result["server"].(map[string]any), *utils.GetDockerNode(), spinRequest.ClusterName)
+		initCommands := [][]string{
+			{"npx", "prisma", "init"},
+		}
+		errChan <- generateCode(path, result["server"].(map[string]any), *utils.GetDockerNode(), spinRequest.ClusterName, initCommands)
 	}()
 
 	var hasError bool
@@ -321,11 +340,21 @@ func SpinRequestConsumerFullStack(spinRequest SpinRequest) error {
 		return err
 	}
 
+	db.SaveRedis(clusterName, "running")
+
 	sendPorts := map[string]interface{}{
 		"appPort":    appPort,
 		"serverPort": backendPort,
 	}
 	errW = webhooks.CodeGenerationAction("finished", sendPorts)
+	if errW != nil {
+		log.Println("Error calling code generation webhook")
+	}
+
+	cluster := map[string]interface{}{
+		"clusterName": spinRequest.ClusterName,
+	}
+	errW = webhooks.CodeGenerationAction("finished", cluster)
 	if errW != nil {
 		log.Println("Error calling code generation webhook")
 	}
@@ -448,10 +477,12 @@ func createNodeJSProject(projectPath string) error {
 	return nil
 }
 
-func generateCode(appPath string, data map[string]interface{}, structure string, cluster string) error {
+func generateCode(appPath string, data map[string]interface{}, structure string, cluster string, initCommands [][]string) error {
 	rawMap, ok := data["fileStructure"].(map[string]interface{})
 	rawLibraries, ok2 := data["libraries"].([]interface{})
+	rawCommands, ok3 := data["additionalCommands"].([]interface{})
 	var libraries []string
+	var commands []string
 	if !ok2 {
 		log.Println("libraries key not found or not an array")
 	} else {
@@ -471,6 +502,19 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 			log.Println("api-service webhook failed")
 		}
 		return errors.New("invalid file structure")
+	}
+
+	if !ok3 {
+		log.Println("additionalCommands key not found or not an array")
+	} else {
+		if len(rawCommands) > 0 {
+			for _, lib := range rawCommands {
+				if str, ok := lib.(string); ok {
+					commands = append(commands, str)
+				}
+			}
+			log.Println("Parsed commands:", commands)
+		}
 	}
 
 	fileMap := make(map[string]string)
@@ -507,13 +551,45 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 
 	}
 
+	errW := webhooks.PrecheckAction("finished", "installing libraries... DO NOT QUIT")
+	if errW != nil {
+		log.Println("api-service webhook failed")
+	}
+
 	err := installLibraries(appPath, libraries)
 	if err != nil {
-		log.Println("Failed to install libraries in node js server")
+		log.Println("Failed to install libraries")
+		errW := webhooks.ErrorAction("finished", "Failed to install libraries", err.Error())
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
 		return err
 	}
 
-	log.Println("✅ fileMap ready:", fileMap)
+	if (len(commands)) > 0 {
+
+		errW = webhooks.PrecheckAction("finished", "running additional commands... DO NOT QUIT")
+		if errW != nil {
+			log.Println("api-service webhook failed")
+		}
+
+		err = runAdditionalCommands(appPath, commands, initCommands)
+		if err != nil {
+			log.Println("command execution failed")
+			errW := webhooks.ErrorAction("finished", "command execution failed", err.Error())
+			if errW != nil {
+				log.Println("api-service webhook failed")
+			}
+			return err
+		}
+	}
+
+	errW = webhooks.PrecheckAction("finished", "Creating Directories... DO NOT QUIT")
+	if errW != nil {
+		log.Println("api-service webhook failed")
+	}
+
+	// log.Println("✅ fileMap ready:", fileMap)
 	err = utils.CreateDirectories(appPath, fileMap)
 	if err != nil {
 		log.Print("Unable to generate project.", err)
@@ -539,15 +615,15 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 				fileContentMapRedis[path] = code.(string)
 			}
 
-			jsonData, err := json.Marshal(fileContentMapRedis)
-			if err != nil {
-				log.Println("Error marshaling map:", err)
-				return err
-			}
+			// jsonData, err := json.Marshal(fileContentMapRedis)
+			// if err != nil {
+			// 	log.Println("Error marshaling map:", err)
+			// 	return err
+			// }
 
-			//saving to redis ----
-			stm := fmt.Sprintf("%s:structure", cluster)
-			db.SaveRedis(stm, string(jsonData))
+			// //saving to redis ----
+			// stm := fmt.Sprintf("%s:structure", cluster)
+			// db.SaveRedis(stm, string(jsonData))
 		} else {
 			fmt.Printf("Path %s is not a map, got %T\n", path, content)
 		}
@@ -565,13 +641,54 @@ func installLibraries(rootPath string, libraries []string) error {
 	cmd.Dir = cwd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
 	// Run the command
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("Failed to install some dependencies in %s: %v\n", cwd, err)
 		// Continue execution even if install fails, just like the JS `resolve()`
 		return nil
+	}
+
+	log.Println("Dependencies installed successfully in", cwd)
+	return nil
+}
+
+func runAdditionalCommands(rootPath string, commands []string, initCommands [][]string) error {
+	libArgs := commands
+	cwd := filepath.Join(rootPath)
+	isError := false
+
+	for index, args := range initCommands {
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = cwd
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			if index == 0 {
+				isError = true
+			}
+			log.Printf("Failed init command: %v\n", args)
+		}
+	}
+
+	// Create the command
+	if !isError {
+		for _, cmdStr := range libArgs {
+			parts := strings.Split(cmdStr, " ")
+			cmd := exec.Command("npx", parts...) // pass as separate arrgs ----
+
+			cmd.Dir = cwd
+
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			err := cmd.Run()
+			if err != nil {
+				log.Printf("Failed to install some dependencies in %s: %v\n", cwd, err)
+				// Continue execution even if install fails, just like the JS `resolve()`
+				return nil
+			}
+		}
 	}
 
 	log.Println("Dependencies installed successfully in", cwd)
