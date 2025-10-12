@@ -29,7 +29,7 @@ func NewLLMClient(provider string) (interfaces.LLMClient, error) {
 		if cliApiKey != nil {
 			apiKey = *cliApiKey
 		}
-		return &GeminiClient{APIKey: apiKey, Spec: "gemini-2.0-flash"}, nil
+		return &GeminiClient{APIKey: apiKey, Spec: "gemini-2.5-flash"}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", provider)
 	}
