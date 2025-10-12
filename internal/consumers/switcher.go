@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/substrate-cli/consumer-service-cli/internal/headless"
 	"github.com/substrate-cli/consumer-service-cli/internal/helpers"
@@ -316,7 +317,9 @@ func HandleSpinConsumer(body []byte) error {
 			if liveUrl != nil && liveUrl != "" {
 				log.Println("live url found")
 				log.Println("proceeding to intiate cluster based on url")
-
+				if strings.ToLower(*model) == "gemini" {
+					time.Sleep(60 * time.Second)
+				}
 				scrapeAndCloneUrl(liveUrl.(string), payload, client)
 				return nil
 			}
