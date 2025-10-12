@@ -86,7 +86,7 @@ func PrecheckAction(status string, message string) error {
 	return nil
 }
 
-func ErrorAction(status string, errorMessage string, message string) error {
+func ErrorAction(status string, errorMessage string, message string, isRetry bool) error {
 	log.Println("inside error action to call api-server...")
 	apiServerUrl := utils.GetAPIServerUrl()
 	url := fmt.Sprintf("%s/api/webhook/error", apiServerUrl)
@@ -99,6 +99,7 @@ func ErrorAction(status string, errorMessage string, message string) error {
 			"stream":      errorMessage,
 			"status":      status,
 			"error":       message,
+			"isRetry":     isRetry,
 		}
 	case "finished":
 		payload = map[string]interface{}{
@@ -107,6 +108,7 @@ func ErrorAction(status string, errorMessage string, message string) error {
 			"stream":      errorMessage,
 			"status":      status,
 			"error":       message,
+			"isRetry":     isRetry,
 		}
 	}
 

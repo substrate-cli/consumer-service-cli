@@ -28,14 +28,14 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		log.Println("Error checking directory:", err)
 	} else if exists {
 		log.Println("Directory exists, skipping project and code generation.")
-		errW := webhooks.ErrorAction("finished", "Directory already exists pls choose a different name for the project.", "cluster init failed")
+		errW := webhooks.ErrorAction("finished", "Directory already exists pls choose a different name for the project.", "cluster init failed", false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
 		return errors.New("Directory already exists pls choose a different name for the project.")
 	} else {
 		if err != nil {
-			errW := webhooks.ErrorAction("finished", "failed to create cluster", "error checking directory")
+			errW := webhooks.ErrorAction("finished", "failed to create cluster", "error checking directory", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -59,7 +59,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		aPort, err := helpers.GetAvailablePort(3000, 3100)
 		if err != nil {
 			log.Println("no free port available")
-			errW := webhooks.ErrorAction("finished", "cluster creation failed", "no free port available")
+			errW := webhooks.ErrorAction("finished", "cluster creation failed", "no free port available", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -78,7 +78,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		if err != nil {
 			log.Println("error parsing prompt struct")
 			log.Println(err)
-			errW := webhooks.ErrorAction("finished", "cluster creation failed", "error parsing prompt struct")
+			errW := webhooks.ErrorAction("finished", "cluster creation failed", "error parsing prompt struct", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -97,7 +97,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 		result, err := producers.CallLLMNode(string(jsonBytes), routingKey)
 		if err != nil {
 			log.Println("Error during app generation")
-			errW := webhooks.ErrorAction("finished", "cluster creation failed", "error during app generation")
+			errW := webhooks.ErrorAction("finished", "cluster creation failed", "error during app generation", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -130,7 +130,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 
 		wg.Wait()
 		if err != nil {
-			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed")
+			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -162,7 +162,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 
 		if hasError {
 			log.Println("One or more tasks failed")
-			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed")
+			errW = webhooks.ErrorAction("finished", "cluster creation failed", "one or more tasks failed", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -185,7 +185,7 @@ func SpinRequestConsumerApp(spinRequest SpinRequest) error {
 	log.Print("Initiating build and starting projects...")
 	err = runProject(rootProjectPath, false, spinRequest.ClusterName, false)
 	if err != nil {
-		errW := webhooks.ErrorAction("finished", "cluster created, but failed to run.", "failed to run project")
+		errW := webhooks.ErrorAction("finished", "cluster created, but failed to run.", "failed to run project", false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -220,7 +220,7 @@ func FixBuildCode(appPath string, data map[string]interface{}) error {
 	rawMap, ok := data["fileStructure"].(map[string]interface{})
 	if !ok {
 		log.Println("fileStructure is not a map[string]interface{}")
-		errW := webhooks.ErrorAction("finished", "error creating cluster", "invalid file structure")
+		errW := webhooks.ErrorAction("finished", "error creating cluster", "invalid file structure", false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}

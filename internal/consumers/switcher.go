@@ -25,7 +25,7 @@ func HandleSpinConsumer(body []byte) error {
 	err := json.Unmarshal(body, &payload)
 	if err != nil {
 		log.Println("failed to decode json")
-		errW := webhooks.ErrorAction("failed", "failed to decode json", err.Error())
+		errW := webhooks.ErrorAction("failed", "failed to decode json", err.Error(), false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -45,7 +45,7 @@ func HandleSpinConsumer(body []byte) error {
 	payload.Model = strings.TrimSpace(payload.Model)
 	err = helpers.SpecifyModel(payload.Model)
 	if err != nil {
-		errW := webhooks.ErrorAction("failed", "invalid model reference", err.Error())
+		errW := webhooks.ErrorAction("failed", "invalid model reference", err.Error(), false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -57,7 +57,7 @@ func HandleSpinConsumer(body []byte) error {
 	if err != nil {
 		log.Println("Error setting provider")
 		log.Println(err)
-		errW := webhooks.ErrorAction("failed", "Error setting provider", err.Error())
+		errW := webhooks.ErrorAction("failed", "Error setting provider", err.Error(), false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -82,7 +82,7 @@ func HandleSpinConsumer(body []byte) error {
 	if err != nil {
 		log.Println("Error in llm precheck.")
 		log.Println(err)
-		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error())
+		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error(), false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -91,7 +91,7 @@ func HandleSpinConsumer(body []byte) error {
 	err = json.Unmarshal([]byte(res), &response)
 	if err != nil {
 		log.Println("Error in decoding llm precheck response", err)
-		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error())
+		errW := webhooks.ErrorAction("failed", "error creating cluster", err.Error(), false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -99,7 +99,7 @@ func HandleSpinConsumer(body []byte) error {
 	}
 	if !response.Is_valid_prompt {
 		///call webhook in api-server for failed attempt
-		errW := webhooks.ErrorAction("failed", response.Reason, "invalid prompt")
+		errW := webhooks.ErrorAction("failed", response.Reason, "invalid prompt", false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -124,7 +124,7 @@ func HandleSpinConsumer(body []byte) error {
 			err = SpinRequestConsumerApp(payload)
 			if err != nil {
 				const msg = "Cluster creation failed"
-				errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster")
+				errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -138,7 +138,7 @@ func HandleSpinConsumer(body []byte) error {
 			backendStructPrompt, err := client.CallConstructBackendPrompt(payload.Prompt)
 			if err != nil {
 				log.Println("Error constrcuting backend prompt")
-				errW = webhooks.ErrorAction("finished", "Error in server generation", "failed to constrcut backend prompt")
+				errW = webhooks.ErrorAction("finished", "Error in server generation", "failed to constrcut backend prompt", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -155,7 +155,7 @@ func HandleSpinConsumer(body []byte) error {
 			payload.BackendPrompt = backendStructPrompt
 			err = SpinRequestConsumerFullStack(payload)
 			if err != nil {
-				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to generate clone")
+				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to generate clone", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -180,7 +180,7 @@ func HandleSpinConsumer(body []byte) error {
 
 			visionResponse, err := headless.GenerateClonePromptByVision(repoUrl, client, true)
 			if err != nil {
-				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to generate clone")
+				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to generate clone", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -194,7 +194,7 @@ func HandleSpinConsumer(body []byte) error {
 
 			if !visionResponse["clonable"].(bool) { //11111111
 				reason := visionResponse["reasoning"]
-				errW = webhooks.ErrorAction("finished", reason.(string), reason.(string))
+				errW = webhooks.ErrorAction("finished", reason.(string), reason.(string), false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -203,7 +203,7 @@ func HandleSpinConsumer(body []byte) error {
 			}
 
 			if !visionResponse["is_repository"].(bool) { /// only 1% chance ----
-				errW = webhooks.ErrorAction("finished", "Invalid github repo", "Invalid github repo")
+				errW = webhooks.ErrorAction("finished", "Invalid github repo", "Invalid github repo", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -212,7 +212,7 @@ func HandleSpinConsumer(body []byte) error {
 
 			defBranch := visionResponse["default_branch"] ///
 			if defBranch == nil {
-				errW = webhooks.ErrorAction("finished", "Unable to fetch description from repository scan, trying to fetch github tree for more details...", "Cluster Init Failed")
+				errW = webhooks.ErrorAction("finished", "Unable to fetch default branch from repository scan, trying to fetch github tree for more details...", "default branch is null", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -222,7 +222,7 @@ func HandleSpinConsumer(body []byte) error {
 			liveUrl := visionResponse["live_url"]
 
 			if descriptionFromVision == nil {
-				errW = webhooks.ErrorAction("finished", "Unable to fetch description from repository scan, trying to fetch github tree for more details...", "Invalid github repo")
+				errW = webhooks.ErrorAction("finished", "Unable to fetch description from repository scan, trying to fetch github tree for more details...", "Invalid github repo", true)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -235,7 +235,7 @@ func HandleSpinConsumer(body []byte) error {
 
 			tree, err := headless.FetchRepoTree(repoName, author, defBranch.(string))
 			if err != nil {
-				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
+				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -250,7 +250,7 @@ func HandleSpinConsumer(body []byte) error {
 			}
 
 			if len(tree.Tree) == 0 {
-				errW = webhooks.ErrorAction("finished", "no files found in repository", "Failed to init cluster")
+				errW = webhooks.ErrorAction("finished", "no files found in repository", "Failed to init cluster", false)
 				if errW != nil {
 					log.Println("api-service webhook failed")
 				}
@@ -275,7 +275,7 @@ func HandleSpinConsumer(body []byte) error {
 				finalResp, err = client.CallGithubTreeScan(string(jsonBytes))
 
 				if err != nil {
-					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
+					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster", false)
 					if errW != nil {
 						log.Println(errW.Error())
 						log.Println("api-service webhook failed")
@@ -293,7 +293,7 @@ func HandleSpinConsumer(body []byte) error {
 			err = json.Unmarshal([]byte(finalResp), &treeScanResponse)
 			if err != nil {
 				log.Println(err)
-				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
+				errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster", false)
 				if errW != nil {
 					log.Println(errW.Error())
 					log.Println("api-service webhook failed")
@@ -303,7 +303,7 @@ func HandleSpinConsumer(body []byte) error {
 
 			if !treeScanResponse["is_clonable"].(bool) {
 				log.Println("Github tree scan says not clonable!")
-				errW = webhooks.ErrorAction("finished", treeScanResponse["reason"].(string), "Failed to init cluster")
+				errW = webhooks.ErrorAction("finished", treeScanResponse["reason"].(string), "Failed to init cluster", false)
 				if errW != nil {
 					log.Println(treeScanResponse["reason"].(string))
 					log.Println("api-service webhook failed")
@@ -330,7 +330,7 @@ func HandleSpinConsumer(body []byte) error {
 				promptGen, err := client.CallPrePromptForGithubClone(descriptionFromVision.(string))
 				if err != nil {
 					log.Println(err.Error())
-					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
+					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -338,7 +338,7 @@ func HandleSpinConsumer(body []byte) error {
 				}
 				if promptGen == "" {
 					log.Println("failed to generate prompt")
-					errW = webhooks.ErrorAction("finished", "failed to generate prompt", "Failed to init cluster")
+					errW = webhooks.ErrorAction("finished", "failed to generate prompt", "Failed to init cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -348,7 +348,7 @@ func HandleSpinConsumer(body []byte) error {
 				err = SpinRequestConsumerApp(payload)
 				if err != nil {
 					const msg = "Cluster creation failed"
-					errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster")
+					errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -367,7 +367,7 @@ func HandleSpinConsumer(body []byte) error {
 				promptGen, err := client.CallPrePromptForGithubClone(descriptionFromTreeScan.(string))
 				if err != nil {
 					log.Println(err.Error())
-					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster")
+					errW = webhooks.ErrorAction("finished", err.Error(), "Failed to init cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -375,7 +375,7 @@ func HandleSpinConsumer(body []byte) error {
 				}
 				if promptGen == "" {
 					log.Println("failed to generate prompt")
-					errW = webhooks.ErrorAction("finished", "failed to generate prompt", "Failed to init cluster")
+					errW = webhooks.ErrorAction("finished", "failed to generate prompt", "Failed to init cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -385,7 +385,7 @@ func HandleSpinConsumer(body []byte) error {
 				err = SpinRequestConsumerApp(payload)
 				if err != nil {
 					const msg = "Cluster creation failed"
-					errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster")
+					errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -395,7 +395,7 @@ func HandleSpinConsumer(body []byte) error {
 				return nil
 			}
 
-			errW = webhooks.ErrorAction("finished", "Unable to fetch any details from repository.", "Unable to fetch any details from repository, Failed to init cluster")
+			errW = webhooks.ErrorAction("finished", "Unable to fetch any details from repository.", "Unable to fetch any details from repository, Failed to init cluster", false)
 			log.Println("Unable to fetch any details from repository")
 			if errW != nil {
 				log.Println("api-service webhook failed")
@@ -428,7 +428,7 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 	if url != "" {
 		_, ok := helpers.IsClonableWebApp(url)
 		if ok != "" {
-			errW = webhooks.ErrorAction("finished", ok, "failed to spin cluster")
+			errW = webhooks.ErrorAction("finished", ok, "failed to spin cluster", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -443,7 +443,7 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 		//getting vision details with check (if a website is eligible for clone) ----
 		resp, err := headless.GenerateClonePromptByVision(url, client, false)
 		if err != nil {
-			errW = webhooks.ErrorAction("finished", err.Error(), "failed to spin cluster")
+			errW = webhooks.ErrorAction("finished", err.Error(), "failed to spin cluster", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -453,13 +453,13 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 			if clonable, ok := value.(bool); ok && !clonable {
 				reason, ok := resp["reason"].(string)
 				if ok && reason != "" {
-					errW = webhooks.ErrorAction("finished", reason, "failed to spin cluster")
+					errW = webhooks.ErrorAction("finished", reason, "failed to spin cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
 					return errors.New(reason)
 				} else {
-					errW = webhooks.ErrorAction("finished", "failed to fetch failure reason", "failed to spin cluster")
+					errW = webhooks.ErrorAction("finished", "failed to fetch failure reason", "failed to spin cluster", false)
 					if errW != nil {
 						log.Println("api-service webhook failed")
 					}
@@ -481,7 +481,7 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 
 			//calling error webhook --
 			const msg = "Cluster creation failed"
-			errW = webhooks.ErrorAction("finished", msg, err.Error())
+			errW = webhooks.ErrorAction("finished", msg, err.Error(), false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -499,10 +499,11 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 			log.Println("there was an error extracting images")
 			//error webhook no images ---
 			const msg = "Cluster creation failed"
-			errW = webhooks.ErrorAction("finished", msg, err.Error())
+			errW = webhooks.ErrorAction("finished", msg, err.Error(), false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
+			return err
 			//
 		}
 		assets = append(assets, extraction.Images...)
@@ -515,7 +516,7 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 		if err != nil {
 			//error webhook
 			const msg = "Cluster creation failed"
-			errW = webhooks.ErrorAction("finished", msg, err.Error())
+			errW = webhooks.ErrorAction("finished", msg, err.Error(), false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
@@ -535,7 +536,7 @@ func scrapeAndCloneUrl(url string, payload SpinRequest, client interfaces.LLMCli
 		err = SpinRequestConsumerApp(payload)
 		if err != nil {
 			const msg = "Cluster creation failed"
-			errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster")
+			errW = webhooks.ErrorAction("finished", msg, "failed to spin cluster", false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
