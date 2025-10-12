@@ -150,7 +150,7 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 
 	if !ok {
 		log.Println("fileStructure is not a map[string]interface{}")
-		errW := webhooks.ErrorAction("finished", "error creating cluster", "invalid file structure")
+		errW := webhooks.ErrorAction("finished", "error creating cluster", "invalid file structure", false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -212,7 +212,7 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 	err := installLibraries(appPath, libraries)
 	if err != nil {
 		log.Println("Failed to install libraries")
-		errW := webhooks.ErrorAction("finished", "Failed to install libraries", err.Error())
+		errW := webhooks.ErrorAction("finished", "Failed to install libraries", err.Error(), false)
 		if errW != nil {
 			log.Println("api-service webhook failed")
 		}
@@ -229,7 +229,7 @@ func generateCode(appPath string, data map[string]interface{}, structure string,
 		err = runAdditionalCommands(appPath, commands, initCommands)
 		if err != nil {
 			log.Println("command execution failed")
-			errW := webhooks.ErrorAction("finished", "command execution failed", err.Error())
+			errW := webhooks.ErrorAction("finished", "command execution failed", err.Error(), false)
 			if errW != nil {
 				log.Println("api-service webhook failed")
 			}
