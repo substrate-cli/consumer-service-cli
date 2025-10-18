@@ -31,6 +31,6 @@ SUPPORTED_MODELS="anthropic,openai,gemini"
 go run ./cmd/app
 ```
 
-this is an entry point to substrate-cli, for more informations, follow instrcutions on https://trysubstrate.com/notes.    
+this is an entry point to substrate-cli, for more informations, follow instructions on https://trysubstrate.com/notes.    
 api-server - https://github.com/substrate-cli/api-server.   
 llm-node - https://github.com/substrate-cli/llm-node-cli.   
