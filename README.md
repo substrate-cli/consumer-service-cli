@@ -9,8 +9,6 @@ ANTHROPIC_MAX_TOKENS=32000
 ANTHROPIC_MAX_TOKENS_PRECHECK=1024
 API_SERVER_URL="http://localhost:8080"
 GEMINI_API_KEY=
-# sanket's
-# GEMINI_API_KEY="AIzaSyAvUziA_X59vRZoInzpwnLM46GFLoafrTw"
 OPENAI_KEY=
 OPENAI_MAX_TOKENS=32000
 OPENAI_MAX_TOKENS_PRECHECK=1024
@@ -31,6 +29,6 @@ SUPPORTED_MODELS="anthropic,openai,gemini"
 go run ./cmd/app
 ```
 
-this is an entry point to substrate-cli, for more informations, follow instructions on https://trysubstrate.com/notes.    
-api-server - https://github.com/substrate-cli/api-server.   
-llm-node - https://github.com/substrate-cli/llm-node-cli.   
+this is an entry point to substrate-cli, for more informations, follow instructions on https://trysubstrate.com/notes.     
+api-server - https://github.com/substrate-cli/api-server.     
+llm-node - https://github.com/substrate-cli/llm-node-cli.     
