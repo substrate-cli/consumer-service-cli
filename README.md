@@ -26,6 +26,7 @@ SUPPORTED_MODELS="anthropic,openai,gemini"
 # run consumer-service
 
 ```bash
+go mod tidy
 go run ./cmd/app
 ```
 
