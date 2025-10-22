@@ -179,7 +179,6 @@ func (claudeClient *AnthropicClient) VisionAnalysis(screenshot string, url strin
 		return "No screenshot available", nil
 	}
 
-	// Get prompt using your existing utils function
 	sys := utils.GetVisionAnalysisPromptForUrl(url, title)
 	if isRepo {
 		sys = utils.GetVisionAnalysisForRepo()
