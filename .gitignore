@@ -12,7 +12,6 @@
 *.test
 *.log
 
-# Dependency directories (if you're not using Go modules)
 vendor/
 
 # IDE/editor settings
