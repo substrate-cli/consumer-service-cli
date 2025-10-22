@@ -51,7 +51,7 @@ func CallLLMNode(prompt string, routingKey string) (map[string]interface{}, erro
 	// Start consuming before publishing (important!)
 	msgs, err := ch.Consume(
 		replyQueue.Name,
-		consumerTag, // Use proper consumer tag, not correlation ID
+		consumerTag, // Using proper consumer tag
 		false,       // manual ack - important for reliability
 		false,       // exclusive
 		false,       // no-local
@@ -62,7 +62,6 @@ func CallLLMNode(prompt string, routingKey string) (map[string]interface{}, erro
 		return nil, fmt.Errorf("failed to start consumer: %w", err)
 	}
 
-	// Ensure consumer is cancelled when function exits
 	defer func() {
 		if err := ch.Cancel(consumerTag, false); err != nil {
 			log.Printf("Failed to cancel consumer: %v", err)
@@ -133,8 +132,6 @@ func CallLLMNode(prompt string, routingKey string) (map[string]interface{}, erro
 					return responseStruct.Code, nil
 				}
 
-				// If status is not "finished", continue waiting for more messages
-				// You might want to handle other statuses here
 			} else {
 				// Wrong correlation ID, reject and continue
 				log.Printf("❌ Correlation ID mismatch. Expected: %s, Got: %s", corrID, msg.CorrelationId)
